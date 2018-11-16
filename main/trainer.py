@@ -8,7 +8,7 @@ from main.loss.losses import calc_plane_loss
 class Trainer:
 
     def __init__(self, args):
-        self.data_loader = PlaneNetDataLoader('/Volumes/MyPassport/planes_scannet_val.tfrecords', 'val', args.batchSize)
+        self.data_loader = PlaneNetDataLoader(args.val_path, 'val', args.batchSize)
         self.model = PlaneNet(args)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.LR)
         print(args)
@@ -23,7 +23,7 @@ class Trainer:
 
             loss = torch.sum(plane_loss)
 
-            print(loss.value())
+            print(loss.item())
 
             loss.backward()
             self.optimizer.step()
@@ -31,5 +31,6 @@ class Trainer:
 
 if __name__ == '__main__':
     args = parse_args()
+    args.val_path = '/Volumes/MyPassport/planes_scannet_val.tfrecords'
     trainer = Trainer(args)
     trainer.train()
