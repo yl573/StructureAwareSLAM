@@ -93,5 +93,11 @@ if __name__ == '__main__':
     args.numTrainingImages = 100
     args.numEpochs = 5
     args.printInterval = 20
+
+    args.drn_channels = (4, 8, 16, 32, 64, 64, 64, 64)
+    args.drn_out_map = 32
+    args.pyr_mid_planes = 32
+    args.feat_planes = 64
+
     trainer = Trainer(args)
     trainer.train()
