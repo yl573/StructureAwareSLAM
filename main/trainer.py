@@ -11,12 +11,26 @@ class Trainer:
         self.data_loader = PlaneNetDataLoader(args.val_path, 'val', args.batchSize)
         self.model = PlaneNet(args)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.LR)
-        print(args)
+        self.device = self.get_device()
+
+    def get_device(self):
+        if torch.cuda.is_available():
+            return torch.cuda.device(0)
+        else:
+            return 'cpu'
+
+    def batch_to_device(self, batch):
+        for k, v, in batch.items():
+            if type(v) == torch.Tensor:
+                batch[k] = v.to(device=self.device)
+        return batch
 
     def train(self):
+        print('Training on device: '.format(self.device))
+
         for i in range(10):
             batch = next(self.data_loader)
-
+            batch = self.batch_to_device(batch)
             planes, segmentation, depth = self.model(batch['image_norm'])
 
             plane_loss = calc_plane_loss(planes, batch['plane'])
