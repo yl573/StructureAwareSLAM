@@ -66,14 +66,14 @@ class Trainer:
                 self.tensorboard.add_scalar('train/plane_loss', plane_loss.item(), current_iter)
 
                 if i % self.args.printInterval == 0:
-                    print('epoch: {}, iter: {}, loss: {}'.format(epoch, i, loss.item()))
+                    print('epoch: {}, iter: {}, loss: {:.3f}'.format(epoch, i, loss.item()))
 
                 loss.backward()
                 self.optimizer.step()
 
                 self.train_loss.update(loss.item())
 
-            print('epoch {} finished, average training loss: {}'.format(epoch, self.train_loss.mean()))
+            print('epoch {} finished, average training loss: {:.3f}'.format(epoch, self.train_loss.mean()))
             self.tensorboard.add_scalar('train/total_loss', loss.item(), epoch)
 
             save_path = os.path.join(self.save_dir, 'checkpoint-latest')
@@ -90,8 +90,8 @@ if __name__ == '__main__':
     args.save_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/models'
     # args.checkpoint = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/test_2018-11-17_01:04:44.301218/checkpoint-latest'
     args.checkpoint = None
-    args.numTrainingImages = 4
-    args.numEpochs = 50
+    args.numTrainingImages = 100
+    args.numEpochs = 5
     args.printInterval = 20
     trainer = Trainer(args)
     trainer.train()
