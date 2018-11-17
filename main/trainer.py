@@ -15,7 +15,7 @@ class Trainer:
 
     def get_device(self):
         if torch.cuda.is_available():
-            return torch.cuda.device(0)
+            return 'cuda'
         else:
             return 'cpu'
 
@@ -26,7 +26,7 @@ class Trainer:
         return batch
 
     def train(self):
-        print('Training on device: '.format(self.device))
+        print('Training on device: {}'.format(self.device))
 
         for i in range(10):
             batch = next(self.data_loader)
