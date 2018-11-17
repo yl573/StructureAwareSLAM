@@ -44,14 +44,12 @@ class Trainer:
                 batch[k] = v.to(device=self.device)
         return batch
 
-
-
     def train(self):
         print('Training on device: {}'.format(self.device))
 
         for epoch in range(self.args.numEpochs):
-            for iter in range(int(self.args.numTrainingImages/self.args.batchSize)):
-                current_iter = epoch * self.args.numTrainingImages + iter
+            for i in range(int(self.args.numTrainingImages/self.args.batchSize)):
+                current_iter = epoch * self.args.numTrainingImages + i
 
                 batch = next(self.data_loader)
                 batch = self.batch_to_device(batch)
@@ -63,8 +61,8 @@ class Trainer:
 
                 self.tensorboard.add_scalar('train/plane_loss', plane_loss.item(), current_iter)
 
-                if iter % self.args.printInterval == 0:
-                    print('epoch: {}, iter: {}, loss: {}'.format(epoch, iter, loss.item()))
+                if i % self.args.printInterval == 0:
+                    print('epoch: {}, iter: {}, loss: {}'.format(epoch, i, loss.item()))
 
                 loss.backward()
                 self.optimizer.step()
@@ -72,6 +70,7 @@ class Trainer:
             save_path = os.path.join(self.save_dir, 'checkpoint-latest')
             torch.save(self.model.state_dict(), save_path)
             self.data_loader = iter(self.data_loader)
+
 
 
 if __name__ == '__main__':
@@ -83,7 +82,7 @@ if __name__ == '__main__':
     # args.checkpoint = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/test_2018-11-17_01:04:44.301218/checkpoint-latest'
     args.checkpoint = None
     args.numTrainingImages = 10
-    args.numEpochs = 1
+    args.numEpochs = 10
     args.printInterval = 20
     trainer = Trainer(args)
     trainer.train()
