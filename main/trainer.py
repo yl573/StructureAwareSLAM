@@ -11,6 +11,7 @@ from main.loss.losses import calc_plane_loss
 class Trainer:
 
     def __init__(self, args):
+        self.args = args
         self.data_loader = PlaneNetDataLoader(args.val_path, 'val', args.batchSize)
         self.device = self.get_device()
         self.model = PlaneNet(args)
@@ -20,6 +21,7 @@ class Trainer:
         self.model.to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.LR)
         self.save_dir = self.create_save_dir(args.log_dir, args.tag)
+        print('Saving model data in: {}'.format(self.save_dir))
         self.tensorboard = SummaryWriter(log_dir=self.save_dir, comment=args.tag)
 
     def create_save_dir(self, log_dir, tag):
@@ -42,12 +44,14 @@ class Trainer:
                 batch[k] = v.to(device=self.device)
         return batch
 
+
+
     def train(self):
         print('Training on device: {}'.format(self.device))
 
-        for epoch in range(args.numEpochs):
-            for iter in range(args.numTrainingImages):
-                current_iter = epoch * args.numTrainingImages + iter
+        for epoch in range(self.args.numEpochs):
+            for iter in range(int(self.args.numTrainingImages/self.args.batchSize)):
+                current_iter = epoch * self.args.numTrainingImages + iter
 
                 batch = next(self.data_loader)
                 batch = self.batch_to_device(batch)
@@ -59,7 +63,7 @@ class Trainer:
 
                 self.tensorboard.add_scalar('train/plane_loss', plane_loss.item(), current_iter)
 
-                if iter % args.printInterval == 0:
+                if iter % self.args.printInterval == 0:
                     print('epoch: {}, iter: {}, loss: {}'.format(epoch, iter, loss.item()))
 
                 loss.backward()
@@ -67,6 +71,7 @@ class Trainer:
 
             save_path = os.path.join(self.save_dir, 'checkpoint-latest')
             torch.save(self.model.state_dict(), save_path)
+            self.data_loader = iter(self.data_loader)
 
 
 if __name__ == '__main__':
@@ -75,7 +80,8 @@ if __name__ == '__main__':
     args.log_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs'
     args.tag = 'test'
     args.save_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/models'
-    args.checkpoint = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/test_2018-11-17_01:04:44.301218/checkpoint-latest'
+    # args.checkpoint = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/test_2018-11-17_01:04:44.301218/checkpoint-latest'
+    args.checkpoint = None
     args.numTrainingImages = 10
     args.numEpochs = 1
     args.printInterval = 20
