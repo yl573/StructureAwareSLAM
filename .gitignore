@@ -1,1 +1,8 @@
 *.pyc
+
+.idea/
+
+crfasrnn_keras/
+fastai_test/
+logs/
+venv/

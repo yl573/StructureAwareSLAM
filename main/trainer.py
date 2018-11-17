@@ -13,6 +13,8 @@ class Trainer:
     def __init__(self, args):
         self.args = args
         self.data_loader = PlaneNetDataLoader(args.val_path, 'val', args.batchSize)
+        assert args.numTrainingImages <= len(self.data_loader)
+
         self.device = self.get_device()
         self.model = PlaneNet(args)
         if args.checkpoint:
@@ -55,8 +57,7 @@ class Trainer:
                 batch = self.batch_to_device(batch)
                 planes, segmentation, depth = self.model(batch['image_norm'])
 
-                plane_loss = calc_plane_loss(planes, batch['plane'])
-
+                plane_loss, assignment = calc_plane_loss(planes, batch['plane'], batch['num_planes'])
                 loss = torch.sum(plane_loss)
 
                 self.tensorboard.add_scalar('train/plane_loss', plane_loss.item(), current_iter)
@@ -81,7 +82,7 @@ if __name__ == '__main__':
     args.save_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/models'
     # args.checkpoint = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/test_2018-11-17_01:04:44.301218/checkpoint-latest'
     args.checkpoint = None
-    args.numTrainingImages = 10
+    args.numTrainingImages = 20
     args.numEpochs = 10
     args.printInterval = 20
     trainer = Trainer(args)

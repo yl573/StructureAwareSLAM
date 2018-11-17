@@ -3,16 +3,25 @@ import torch.nn.functional as F
 from main.loss.modules import assignmentModule, oneHotModule
 
 
-def calc_plane_loss(planes_pred, planes_gt):
+def calc_plane_loss(planes_pred, planes_gt, num_planes):
     loss = 0
-    for plane_id in range(planes_pred.size(1)):
-        # calculate plane error wrt to each gt plane
-        pred_plane = planes_pred[:, plane_id:plane_id + 1, :]  # user id:id+1 to keep dimension
-        plane_errors = torch.norm(planes_gt - pred_plane, 2, 2)  # take the norm along the vector dimension
+    plane_assoc = torch.zeros(planes_gt.shape[:2], dtype=torch.int) - 1
 
-        min_error, min_error_planes = torch.min(plane_errors, 1)  # find the gt plane with the minimum error
-        loss += min_error.mean()  # use the minimum error as the loss
-    return loss
+    # for each image in the batch
+    for batch_id in range(len(num_planes)):
+        # for each pred plane
+        for plane_id in range(num_planes[batch_id].item()):
+            # calculate plane error wrt to each pred plane
+            gt_plane = planes_gt[batch_id, plane_id:plane_id + 1, :]  # user id:id+1 to keep dimension
+            # take the norm along the vector dimension
+            plane_errors = torch.norm(planes_pred[batch_id] - gt_plane, 2, 1)
+            # find the pred plane with the minimum error
+            min_error, min_error_plane = torch.min(plane_errors, 0)
+            loss += min_error  # use the minimum error as the loss
+
+            plane_assoc[batch_id, plane_id] = min_error_plane
+
+    return loss, plane_assoc
 
 # def calc_plane_loss(planes_pred, planes_gt, num_planes):
 #     distances = torch.norm(planes_gt.unsqueeze(2) - planes_pred.unsqueeze(1), dim=-1)
