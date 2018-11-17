@@ -53,7 +53,7 @@ def parse_args():
                         default=1024, type=int)
     parser.add_argument('--numOutputPlanes', dest='numOutputPlanes',
                         help='the number of output planes',
-                        default=10, type=int)
+                        default=20, type=int)
     parser.add_argument('--numInputClasses', dest='numInputClasses',
                         help='the number of input classes',
                         default=0, type=int)

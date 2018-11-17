@@ -1,7 +1,6 @@
 import tensorflow as tf
 import io
 import numpy as np
-from multiprocessing import Pool
 
 train_rec = '/Volumes/MyPassport/planes_scannet_train.tfrecords'
 val_rec = '/Volumes/MyPassport/planes_scannet_val.tfrecords'
@@ -12,7 +11,6 @@ NUM_PLANES = 20
 
 NUM_TRAIN = 50000
 NUM_VAL = 760
-
 
 def extract_image(feature):
     img_string = feature['image_raw'].bytes_list.value[0]

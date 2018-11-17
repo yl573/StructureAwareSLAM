@@ -5,8 +5,24 @@ import torch
 from tensorboardX import SummaryWriter
 import os
 import datetime
-from main.loss.losses import calc_plane_loss
-from main.loss.tracker import LossTracker
+from main.loss.losses import calc_plane_loss, calc_seg_loss, find_plane_assignment, permute_planes, permute_segmentation
+from main.loss.tracker import CompositeLossTracker
+import time
+
+
+class Timer:
+
+    def __init__(self, name):
+        self.name = name
+
+    def __enter__(self):
+        self.start = time.clock()
+        return self
+
+    def __exit__(self, *args):
+        end = time.clock()
+        interval = end - self.start
+        # print('{} took {} seconds'.format(self.name, interval))
 
 
 class Trainer:
@@ -27,7 +43,7 @@ class Trainer:
         print('Saving model data in: {}'.format(self.save_dir))
 
         self.tensorboard = SummaryWriter(log_dir=self.save_dir, comment=args.tag)
-        self.train_loss = LossTracker()
+        self.losses = CompositeLossTracker(['total_train_loss', 'plane_loss', 'seg_loss'])
 
     def create_save_dir(self, log_dir, tag):
         timestamp = str(datetime.datetime.utcnow()).replace(' ', '_')
@@ -49,21 +65,38 @@ class Trainer:
                 batch[k] = v.to(device=self.device)
         return batch
 
+    def print_losses(self):
+        for k, v in self.losses.mean().items():
+            print('{}: {}'.format(k, v))
+        self.losses.reset()
+        print()
+
     def train(self):
         print('Training on device: {}'.format(self.device))
 
         for epoch in range(self.args.numEpochs):
-            for i in range(int(self.args.numTrainingImages/self.args.batchSize)):
+            for i in range(int(self.args.numTrainingImages / self.args.batchSize)):
                 current_iter = epoch * self.args.numTrainingImages + i
 
                 batch = next(self.data_loader)
                 batch = self.batch_to_device(batch)
-                planes, segmentation, depth = self.model(batch['image_norm'])
 
-                plane_loss, assignment = calc_plane_loss(planes, batch['plane'], batch['num_planes'])
-                loss = torch.sum(plane_loss)
+                with Timer('forward pass') as t:
+                    planes, segmentation, depth = self.model(batch['image_norm'])
+
+                assignment = find_plane_assignment(planes, batch['plane'])
+
+                ordered_planes = permute_planes(planes, assignment)
+                plane_loss = calc_plane_loss(ordered_planes, batch['plane'], batch['num_planes'])
+
+                ordered_seg = permute_segmentation(segmentation, assignment)
+                seg_loss = calc_seg_loss(ordered_seg, batch['segmentation_raw'])
 
                 self.tensorboard.add_scalar('train/plane_loss', plane_loss.item(), current_iter)
+                self.tensorboard.add_scalar('train/segmentation_loss', seg_loss.item(), current_iter)
+
+                # loss = plane_loss + seg_loss
+                loss = seg_loss
 
                 if i % self.args.printInterval == 0:
                     print('epoch: {}, iter: {}, loss: {:.3f}'.format(epoch, i, loss.item()))
@@ -71,15 +104,19 @@ class Trainer:
                 loss.backward()
                 self.optimizer.step()
 
-                self.train_loss.update(loss.item())
+                self.losses.update(dict(
+                    total_train_loss=loss.item(),
+                    plane_loss=plane_loss.item(),
+                    seg_loss=seg_loss.item()
+                ))
 
-            print('epoch {} finished, average training loss: {:.3f}'.format(epoch, self.train_loss.mean()))
+            print('\nepoch {} finished'.format(epoch))
+            self.print_losses()
             self.tensorboard.add_scalar('train/total_loss', loss.item(), epoch)
 
             save_path = os.path.join(self.save_dir, 'checkpoint-latest')
             torch.save(self.model.state_dict(), save_path)
             self.data_loader = iter(self.data_loader)
-
 
 
 if __name__ == '__main__':
