@@ -301,7 +301,11 @@ def drn_c_58(pretrained=False, **kwargs):
 def drn_d_22(pretrained=False, **kwargs):
     model = DRN(BasicBlock, [1, 1, 2, 2, 2, 2, 1, 1], arch='D', **kwargs)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['drn-d-22']))
+        pretrained_dict = model_zoo.load_url(model_urls['drn-d-22'])
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if 'fc' not in k}
+        state = model.state_dict()
+        state.update(pretrained_dict)
+        model.load_state_dict(state)
     return model
 
 

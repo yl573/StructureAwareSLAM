@@ -1,4 +1,4 @@
-from main.models.drn import drn_d_54
+from main.models.drn import drn_d_22
 from main.models.modules import *
 
 class PlaneNet(nn.Module):
@@ -6,7 +6,7 @@ class PlaneNet(nn.Module):
         super(PlaneNet, self).__init__()
         
         self.options = options        
-        self.drn = drn_d_54(pretrained=True, out_map=32, num_classes=-1, out_middle=False)
+        self.drn = drn_d_22(pretrained=True, out_map=32, num_classes=-1, out_middle=False)
         self.pool = torch.nn.AvgPool2d((int(32 * options.height / options.width), 32))
         self.plane_pred = nn.Linear(512, options.numOutputPlanes * 3)
         self.pyramid = PyramidModule(options, 512, 128)

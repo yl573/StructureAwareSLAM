@@ -6,6 +6,7 @@ from tensorboardX import SummaryWriter
 import os
 import datetime
 from main.loss.losses import calc_plane_loss
+from main.loss.tracker import LossTracker
 
 
 class Trainer:
@@ -24,7 +25,9 @@ class Trainer:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.LR)
         self.save_dir = self.create_save_dir(args.log_dir, args.tag)
         print('Saving model data in: {}'.format(self.save_dir))
+
         self.tensorboard = SummaryWriter(log_dir=self.save_dir, comment=args.tag)
+        self.train_loss = LossTracker()
 
     def create_save_dir(self, log_dir, tag):
         timestamp = str(datetime.datetime.utcnow()).replace(' ', '_')
@@ -68,6 +71,11 @@ class Trainer:
                 loss.backward()
                 self.optimizer.step()
 
+                self.train_loss.update(loss.item())
+
+            print('epoch {} finished, average training loss: {}'.format(epoch, self.train_loss.mean()))
+            self.tensorboard.add_scalar('train/total_loss', loss.item(), epoch)
+
             save_path = os.path.join(self.save_dir, 'checkpoint-latest')
             torch.save(self.model.state_dict(), save_path)
             self.data_loader = iter(self.data_loader)
@@ -82,8 +90,8 @@ if __name__ == '__main__':
     args.save_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/models'
     # args.checkpoint = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/test_2018-11-17_01:04:44.301218/checkpoint-latest'
     args.checkpoint = None
-    args.numTrainingImages = 20
-    args.numEpochs = 10
+    args.numTrainingImages = 4
+    args.numEpochs = 50
     args.printInterval = 20
     trainer = Trainer(args)
     trainer.train()
