@@ -18,14 +18,13 @@ def calcPlaneDepthsModule(width, height, planes, metadata, return_ranges=False):
             metadata[4] + 1) - metadata[2]) / metadata[0]
     vrange = (torch.arange(height, dtype=torch.float32).view((-1, 1)).repeat(1, width) / (float(height) + 1) * (
             metadata[5] + 1) - metadata[3]) / metadata[1]
-    ranges = torch.stack([urange, torch.ones(urange.shape), -vrange], dim=-1)
+    ranges = torch.stack([urange, torch.ones(urange.shape), -vrange], dim=-1).to(device=planes.device)
 
     planeOffsets = torch.norm(planes, dim=-1, keepdim=True)
     planeNormals = planes / torch.clamp(planeOffsets, min=1e-4)
 
     normalXYZ = torch.sum(ranges.unsqueeze(-2) * planeNormals.unsqueeze(-3).unsqueeze(-3), dim=-1)
     normalXYZ[normalXYZ == 0] = 1e-4
-    normalXYZ = normalXYZ.to(device=planes.device)
 
     planeDepths = planeOffsets.squeeze(-1).unsqueeze(-2).unsqueeze(-2) / normalXYZ
     planeDepths = torch.clamp(planeDepths, min=0, max=MAX_DEPTH)
