@@ -38,11 +38,12 @@ def permute_planes(planes, assignment):
 
 
 def permute_segmentation(seg, assignment):
+    seg_perm = torch.zeros(seg.size())
     for i, order in enumerate(assignment):
         # leave "non-plane" index unchanged
         order = torch.cat((order, torch.tensor([NUM_PLANES])))
-        seg[i, :] = seg[i, order]
-    return seg
+        seg_perm[i, :] = seg[i, order]
+    return seg_perm
 
 
 def calc_plane_loss(planes_pred, planes_gt, num_planes):
