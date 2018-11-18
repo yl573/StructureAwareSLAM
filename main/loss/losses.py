@@ -32,13 +32,14 @@ def permute_planes(planes, assignment):
     :param planes: (batch, num_planes, 3)
     :param assignment: (batch, num_planes), assignment[i,j] is the pred plane corresponding to the jth gt plane
     """
+    planes_perm = torch.zeros(planes.size()).to(device=planes.device)
     for i, order in enumerate(assignment):
-        planes[i, :] = planes[i, order]
-    return planes
+        planes_perm[i, :] = planes[i, order]
+    return planes_perm
 
 
 def permute_segmentation(seg, assignment):
-    seg_perm = torch.zeros(seg.size())
+    seg_perm = torch.zeros(seg.size()).to(device=seg.device)
     for i, order in enumerate(assignment):
         # leave "non-plane" index unchanged
         order = torch.cat((order, torch.tensor([NUM_PLANES])))
