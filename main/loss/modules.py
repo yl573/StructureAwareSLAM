@@ -25,6 +25,8 @@ def calcPlaneDepthsModule(width, height, planes, metadata, return_ranges=False):
 
     normalXYZ = torch.sum(ranges.unsqueeze(-2) * planeNormals.unsqueeze(-3).unsqueeze(-3), dim=-1)
     normalXYZ[normalXYZ == 0] = 1e-4
+    normalXYZ = normalXYZ.to(device=planes.device)
+
     planeDepths = planeOffsets.squeeze(-1).unsqueeze(-2).unsqueeze(-2) / normalXYZ
     planeDepths = torch.clamp(planeDepths, min=0, max=MAX_DEPTH)
     if return_ranges:

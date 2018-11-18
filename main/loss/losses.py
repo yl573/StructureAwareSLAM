@@ -47,7 +47,7 @@ def permute_segmentation(seg, assignment):
 
 def calc_plane_loss(planes_pred, planes_gt, num_planes):
     # create valid plane mask
-    valid_mask = torch.zeros(planes_gt.size())
+    valid_mask = torch.zeros(planes_gt.size()).to(device=planes_pred.device)
     for i, n in enumerate(num_planes):
         valid_mask[i, :n, :] = 1
 
