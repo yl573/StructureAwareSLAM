@@ -14,7 +14,7 @@ def parse_args():
                         default=1, type=int)
     parser.add_argument('--batchSize', dest='batchSize',
                         help='batch size',
-                        default=2, type=int)
+                        default=4, type=int)
     parser.add_argument('--dataset', dest='dataset',
                         help='dataset name for training',
                         default='scannet', type=str)

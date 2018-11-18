@@ -9,7 +9,8 @@ def temp_softmax(seg):
     """
     exp_seg = torch.exp(seg)
     sum_exp = torch.sum(exp_seg, 1).unsqueeze(1)
-    return exp_seg / sum_exp
+    result = exp_seg / sum_exp
+    return result
 
 
 class PlaneNet(nn.Module):

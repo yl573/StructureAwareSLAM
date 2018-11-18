@@ -22,7 +22,7 @@ class Timer:
     def __exit__(self, *args):
         end = time.clock()
         interval = end - self.start
-        # print('{} took {} seconds'.format(self.name, interval))
+        # print('{} took {:.5f} seconds'.format(self.name, interval))
 
 
 class Trainer:
@@ -78,7 +78,8 @@ class Trainer:
             for i in range(int(self.args.numTrainingImages / self.args.batchSize)):
                 current_iter = epoch * self.args.numTrainingImages + i
 
-                batch = next(self.data_loader)
+                with Timer('load data') as t:
+                    batch = next(self.data_loader)
                 batch = self.batch_to_device(batch)
 
                 with Timer('forward pass') as t:
@@ -101,8 +102,9 @@ class Trainer:
 
                 loss = plane_loss + seg_loss + depth_loss
 
-                loss.backward()
-                self.optimizer.step()
+                with Timer('backward pass and update') as t:
+                    loss.backward()
+                    self.optimizer.step()
 
                 self.losses.update(dict(
                     total_train_loss=loss.item(),
@@ -134,8 +136,10 @@ if __name__ == '__main__':
     args.numTrainingImages = 100
     args.numEpochs = 5
     args.printInterval = 20
+    args.batchSize = 8
 
-    args.drn_channels = (4, 8, 16, 32, 64, 64, 64, 64)
+    # args.drn_channels = (4, 8, 16, 32, 64, 64, 64, 64)
+    args.drn_channels = (4, 4, 4, 4, 4, 4, 4, 4)
     args.drn_out_map = 32
     args.pyr_mid_planes = 32
     args.feat_planes = 64

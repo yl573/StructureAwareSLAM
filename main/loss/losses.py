@@ -92,6 +92,6 @@ def calc_depth_loss(depth_pred, depth_gt, planes_pred, seg_pred, calib, cam_heig
     depth_errors = torch.sum(per_plane_errors * seg_pred, 1)
     depth_error = torch.mean(depth_errors)
 
-    assert depth_error.item() > 0
+    assert depth_error.item() >= 0
 
     return depth_error
