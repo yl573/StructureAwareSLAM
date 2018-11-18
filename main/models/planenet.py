@@ -2,6 +2,16 @@ from main.models.drn import drn_d_22
 from main.models.modules import *
 
 
+def temp_softmax(seg):
+    """
+    Pytorch softmax has a bug that causes an inplace operation error
+    using custom function for now
+    """
+    exp_seg = torch.exp(seg)
+    sum_exp = torch.sum(exp_seg, 1).unsqueeze(1)
+    return exp_seg / sum_exp
+
+
 class PlaneNet(nn.Module):
     def __init__(self, options):
         super(PlaneNet, self).__init__()
@@ -23,7 +33,6 @@ class PlaneNet(nn.Module):
         self.segmentation_pred = nn.Conv2d(options.feat_planes, options.numOutputPlanes + 1, kernel_size=1)
         self.depth_pred = nn.Conv2d(options.feat_planes, 1, kernel_size=1)
         self.upsample = torch.nn.Upsample(size=(options.outputHeight, options.outputWidth), mode='bilinear')
-        return
 
     def forward(self, inp):
         batch_dim = inp.shape[0]
@@ -32,6 +41,9 @@ class PlaneNet(nn.Module):
         planes = self.plane_pred(features_pool).view((batch_dim, self.options.numOutputPlanes, 3))
         features = self.pyramid(features)
         features = self.feature_conv(features)
+
         segmentation = self.upsample(self.segmentation_pred(features))
+        segmentation = temp_softmax(segmentation)
+
         depth = self.upsample(self.depth_pred(features))
         return planes, segmentation, depth

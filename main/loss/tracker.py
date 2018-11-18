@@ -16,6 +16,7 @@ class CompositeLossTracker:
         :param loss_dict: {'loss_name', loss_val, ...}
         """
         for k, v in loss_dict.items():
+            assert k in self.losses, '"{}" is not a tracked loss'.format(k)
             self.losses[k].update(v)
 
     def mean(self):

@@ -5,7 +5,7 @@ import torch
 from tensorboardX import SummaryWriter
 import os
 import datetime
-from main.loss.losses import calc_plane_loss, calc_seg_loss, find_plane_assignment, permute_planes, permute_segmentation
+from main.loss.losses import *
 from main.loss.tracker import CompositeLossTracker
 import time
 
@@ -43,7 +43,7 @@ class Trainer:
         print('Saving model data in: {}'.format(self.save_dir))
 
         self.tensorboard = SummaryWriter(log_dir=self.save_dir, comment=args.tag)
-        self.losses = CompositeLossTracker(['total_train_loss', 'plane_loss', 'seg_loss'])
+        self.losses = CompositeLossTracker(['total_train_loss', 'plane_loss', 'seg_loss', 'depth_loss'])
 
     def create_save_dir(self, log_dir, tag):
         timestamp = str(datetime.datetime.utcnow()).replace(' ', '_')
@@ -82,24 +82,24 @@ class Trainer:
                 batch = self.batch_to_device(batch)
 
                 with Timer('forward pass') as t:
-                    planes, segmentation, depth = self.model(batch['image_norm'])
+                    planes_pred, seg_pred, depth_pred = self.model(batch.image_norm)
 
-                assignment = find_plane_assignment(planes, batch['plane'])
+                assignment = find_plane_assignment(planes_pred, batch.plane)
 
-                ordered_planes = permute_planes(planes, assignment)
-                plane_loss = calc_plane_loss(ordered_planes, batch['plane'], batch['num_planes'])
+                ordered_planes = permute_planes(planes_pred, assignment)
+                plane_loss = calc_plane_loss(ordered_planes, batch.plane, batch.num_planes)
 
-                ordered_seg = permute_segmentation(segmentation, assignment)
-                seg_loss = calc_seg_loss(ordered_seg, batch['segmentation_raw'])
+                ordered_seg = permute_segmentation(seg_pred, assignment)
+                seg_loss = calc_seg_loss(ordered_seg, batch.segmentation_raw)
+
+                depth_loss = calc_depth_loss(depth_pred, batch.depth, ordered_planes, ordered_seg, batch.calib,
+                                             batch.cam_height, batch.cam_width)
 
                 self.tensorboard.add_scalar('train/plane_loss', plane_loss.item(), current_iter)
                 self.tensorboard.add_scalar('train/segmentation_loss', seg_loss.item(), current_iter)
+                self.tensorboard.add_scalar('train/depth_loss', depth_loss.item(), current_iter)
 
-                # loss = plane_loss + seg_loss
-                loss = seg_loss
-
-                if i % self.args.printInterval == 0:
-                    print('epoch: {}, iter: {}, loss: {:.3f}'.format(epoch, i, loss.item()))
+                loss = plane_loss + seg_loss + depth_loss
 
                 loss.backward()
                 self.optimizer.step()
@@ -107,8 +107,12 @@ class Trainer:
                 self.losses.update(dict(
                     total_train_loss=loss.item(),
                     plane_loss=plane_loss.item(),
-                    seg_loss=seg_loss.item()
+                    seg_loss=seg_loss.item(),
+                    depth_loss=depth_loss.item()
                 ))
+
+                if i % self.args.printInterval == 0:
+                    print('epoch: {}, iter: {}, loss: {:.3f}'.format(epoch, i, loss.item()))
 
             print('\nepoch {} finished'.format(epoch))
             self.print_losses()

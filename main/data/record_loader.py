@@ -1,6 +1,7 @@
 import tensorflow as tf
 import io
 import numpy as np
+from attrdict import AttrDict
 
 train_rec = '/Volumes/MyPassport/planes_scannet_train.tfrecords'
 val_rec = '/Volumes/MyPassport/planes_scannet_val.tfrecords'
@@ -11,6 +12,7 @@ NUM_PLANES = 20
 
 NUM_TRAIN = 50000
 NUM_VAL = 760
+
 
 def extract_image(feature):
     img_string = feature['image_raw'].bytes_list.value[0]
@@ -49,6 +51,14 @@ def extract_planes(feature):
 def extract_depth(feature):
     planes = np.array(feature['depth'].float_list.value)
     return np.reshape(planes, (1, HEIGHT, WIDTH))
+
+
+def extract_metadata(feature):
+    data = np.array(feature['info'].float_list.value)
+    # first 16 numbers for the camera calibration matrix
+    calib = np.reshape(data[:16], (1, 4, 4))
+    extra = np.reshape(data[16:], (1, 4))
+    return calib, extra
 
 
 class RecordLoader:
@@ -93,10 +103,14 @@ class RecordLoader:
         example = tf.train.Example()
         example.ParseFromString(string_record)
         feature = example.features.feature
+
+        calib, extra = extract_metadata(feature)
         return {
             'image_raw': extract_image(feature),
             'segmentation_raw': extract_seg(feature),
             'num_planes': extract_num_planes(feature),
             'plane': extract_planes(feature),
-            'depth': extract_depth(feature)
+            'depth': extract_depth(feature),
+            'calib': calib,
+            'extra': extra
         }

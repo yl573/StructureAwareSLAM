@@ -1,5 +1,6 @@
 from main.data.record_loader import RecordLoader, NUM_PLANES
 import torch
+from attrdict import AttrDict
 
 
 def img_to_torch(img):
@@ -30,11 +31,18 @@ class PlaneNetDataLoader:
         return len(self.rec_loader)
 
     def __next__(self):
-        batch = next(self.rec_loader)
-        batch['image_norm'] = img_to_torch(batch['image_raw'])
-        batch['plane'] = torch.tensor(batch['plane'], dtype=torch.float)
-        batch['num_planes'] = torch.tensor(batch['num_planes'], dtype=torch.int)
-        batch['depth'] = torch.tensor(batch['depth'], dtype=torch.float)
-        batch['segmentation_raw'] = torch.tensor(batch['segmentation_raw'], dtype=torch.int)
+        raw_batch = next(self.rec_loader)
+
+        batch = AttrDict()
+        batch.image_norm = img_to_torch(raw_batch['image_raw'])
+        batch.plane = torch.tensor(raw_batch['plane'], dtype=torch.float)
+        batch.num_planes = torch.tensor(raw_batch['num_planes'], dtype=torch.int)
+        batch.depth = torch.tensor(raw_batch['depth'], dtype=torch.float)
+        batch.segmentation_raw = torch.tensor(raw_batch['segmentation_raw'], dtype=torch.int)
+        batch.calib = torch.tensor(raw_batch['calib'][0], dtype=torch.float32)
+
+        # common width and height for each batch
+        batch.cam_width = raw_batch['extra'][0, 0]
+        batch.cam_height = raw_batch['extra'][0, 1]
 
         return batch
