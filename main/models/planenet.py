@@ -10,6 +10,9 @@ def temp_softmax(seg):
     exp_seg = torch.exp(seg)
     sum_exp = torch.sum(exp_seg, 1).unsqueeze(1)
     result = exp_seg / sum_exp
+
+    assert (torch.sum(result, 1) == 1).min() == 1, 'BUG: temp_softmax not summing to 1!!!'
+
     return result
 
 

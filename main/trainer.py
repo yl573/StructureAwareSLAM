@@ -133,9 +133,9 @@ if __name__ == '__main__':
     args.save_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/models'
     # args.checkpoint = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/test_2018-11-17_01:04:44.301218/checkpoint-latest'
     args.checkpoint = None
-    args.numTrainingImages = 100
+    args.numTrainingImages = 700
     args.numEpochs = 5
-    args.printInterval = 20
+    args.printInterval = 1
     args.batchSize = 8
 
     # args.drn_channels = (4, 8, 16, 32, 64, 64, 64, 64)

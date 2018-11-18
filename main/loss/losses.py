@@ -56,6 +56,8 @@ def calc_plane_loss(planes_pred, planes_gt, num_planes):
     loss_full = loss_full * valid_mask
     # then take the mean of the loss
     loss_reduced = torch.mean(loss_full)
+
+    assert loss_reduced.item() > 0, 'invalid plane loss: {}'.format(loss_reduced)
     return loss_reduced
 
 
@@ -92,6 +94,6 @@ def calc_depth_loss(depth_pred, depth_gt, planes_pred, seg_pred, calib, cam_heig
     depth_errors = torch.sum(per_plane_errors * seg_pred, 1)
     depth_error = torch.mean(depth_errors)
 
-    assert depth_error.item() >= 0
+    assert depth_error.item() > 0, 'invalid depth loss: {}'.format(depth_error)
 
     return depth_error
