@@ -1,28 +1,13 @@
 from main.data.data_loaders import PlaneNetDataLoader
 from main.models.planenet import PlaneNet
 from main.args import parse_args
-import torch
 from tensorboardX import SummaryWriter
 import os
 import datetime
 from main.loss.losses import *
 from main.loss.tracker import CompositeLossTracker
-import time
-
-
-class Timer:
-
-    def __init__(self, name):
-        self.name = name
-
-    def __enter__(self):
-        self.start = time.clock()
-        return self
-
-    def __exit__(self, *args):
-        end = time.clock()
-        interval = end - self.start
-        # print('{} took {:.5f} seconds'.format(self.name, interval))
+from main.visualization.plane_vis import draw_seg_vis
+from main.utils import Timer
 
 
 class Trainer:
@@ -85,22 +70,20 @@ class Trainer:
                 with Timer('forward pass') as t:
                     planes_pred, seg_pred, depth_pred = self.model(batch.image_norm)
 
-                assignment = find_plane_assignment(planes_pred, batch.plane)
+                assignment = find_plane_assignment(planes_pred, batch.planes)
 
                 ordered_planes = permute_planes(planes_pred, assignment)
-                plane_loss = calc_plane_loss(ordered_planes, batch.plane, batch.num_planes)
+                plane_loss = calc_plane_loss(ordered_planes, batch.planes, batch.num_planes)
 
                 ordered_seg = permute_segmentation(seg_pred, assignment)
-                seg_loss = calc_seg_loss(ordered_seg, batch.segmentation_raw)
+                seg_loss = calc_seg_loss(ordered_seg, batch.seg)
 
                 depth_loss = calc_depth_loss(depth_pred, batch.depth, ordered_planes, ordered_seg, batch.calib,
                                              batch.cam_height, batch.cam_width)
 
-                self.tensorboard.add_scalar('train/plane_loss', plane_loss.item(), current_iter)
-                self.tensorboard.add_scalar('train/segmentation_loss', seg_loss.item(), current_iter)
-                self.tensorboard.add_scalar('train/depth_loss', depth_loss.item(), current_iter)
-
-                loss = plane_loss + seg_loss + depth_loss
+                loss = (self.args.plane_weight * plane_loss +
+                        self.args.seg_weight * seg_loss +
+                        self.args.depth_weight * depth_loss)
 
                 with Timer('backward pass and update') as t:
                     loss.backward()
@@ -116,9 +99,24 @@ class Trainer:
                 if i % self.args.printInterval == 0:
                     print('epoch: {}, iter: {}, loss: {:.3f}'.format(epoch, i, loss.item()))
 
+                    self.tensorboard.add_scalar('train/plane_loss', plane_loss.item(), current_iter)
+                    self.tensorboard.add_scalar('train/segmentation_loss', seg_loss.item(), current_iter)
+                    self.tensorboard.add_scalar('train/depth_loss', depth_loss.item(), current_iter)
+                    self.tensorboard.add_scalar('train/total_loss', loss.item(), current_iter)
+
+                    seg_vis = draw_seg_vis(batch.image_raw, ordered_seg, batch.seg)
+                    self.tensorboard.add_image('train/plane_visualization', seg_vis, current_iter)
+
+                    if args.train_callback:
+                        args.train_callback({
+                            'plane_loss', plane_loss.item(),
+                            'seg_loss', seg_loss.item(),
+                            'depth_loss', depth_loss.item(),
+                            'seg_vis', seg_vis
+                        })
+
             print('\nepoch {} finished'.format(epoch))
             self.print_losses()
-            self.tensorboard.add_scalar('train/total_loss', loss.item(), epoch)
 
             save_path = os.path.join(self.save_dir, 'checkpoint-latest')
             torch.save(self.model.state_dict(), save_path)
@@ -127,7 +125,8 @@ class Trainer:
 
 if __name__ == '__main__':
     args = parse_args()
-    args.val_path = '/Volumes/MyPassport/planes_scannet_val.tfrecords'
+    # args.val_path = '/Volumes/MyPassport/planes_scannet_val.tfrecords'
+    args.val_path = '/Users/yuxuanliu/Desktop/4YP/planes_scannet_val.tfrecords'
     args.log_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs'
     args.tag = 'test'
     args.save_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/models'
@@ -135,15 +134,18 @@ if __name__ == '__main__':
     args.checkpoint = None
     args.numTrainingImages = 700
     args.numEpochs = 5
-    args.printInterval = 1
+    args.printInterval = 10
     args.batchSize = 8
+    args.plane_weight = 1
+    args.seg_weight = 1
+    args.depth_weight = 1
+    args.train_callback = None
 
-    # args.drn_channels = (4, 8, 16, 32, 64, 64, 64, 64)
-    args.drn_channels = (4, 4, 4, 4, 4, 4, 4, 4)
+    args.drn_channels = (4, 8, 16, 32, 64, 64, 64, 64)
+    # args.drn_channels = (4, 4, 4, 4, 4, 4, 4, 4)
     args.drn_out_map = 32
     args.pyr_mid_planes = 32
     args.feat_planes = 64
 
     trainer = Trainer(args)
     trainer.train()
-
