@@ -107,8 +107,8 @@ class Trainer:
                     seg_vis = draw_seg_vis(batch.image_raw, ordered_seg, batch.seg)
                     self.tensorboard.add_image('train/plane_visualization', seg_vis, current_iter)
 
-                    if args.train_callback:
-                        args.train_callback({
+                    if self.args.train_callback:
+                        self.args.train_callback({
                             'plane_loss', plane_loss.item(),
                             'seg_loss', seg_loss.item(),
                             'depth_loss', depth_loss.item(),
