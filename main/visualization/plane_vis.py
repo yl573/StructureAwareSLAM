@@ -54,6 +54,10 @@ def draw_seg_images(seg):
 
 
 def draw_seg_vis(img, pred_seg, gt_seg):
+    img = img.cpu()
+    pred_seg = pred_seg.cpu()
+    gt_seg = gt_seg.cpu()
+
     with Timer('draw') as t:
         pred_seg_assignment = torch.argmax(pred_seg, dim=1)
         pred_seg = draw_seg_images(pred_seg_assignment).float()
