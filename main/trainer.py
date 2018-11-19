@@ -109,10 +109,10 @@ class Trainer:
 
                     if self.args.train_callback:
                         self.args.train_callback({
-                            'plane_loss', plane_loss.item(),
-                            'seg_loss', seg_loss.item(),
-                            'depth_loss', depth_loss.item(),
-                            'seg_vis', seg_vis
+                            'plane_loss': plane_loss.item(),
+                            'seg_loss': seg_loss.item(),
+                            'depth_loss': depth_loss.item(),
+                            'seg_vis': seg_vis
                         })
 
             print('\nepoch {} finished'.format(epoch))
