@@ -56,6 +56,11 @@ class Trainer:
         self.losses.reset()
         print()
 
+    def seg_to_onehot(self, seg, dims):
+        shape = [seg.size(0), dims, seg.size(1), seg.size(2)]
+        batch_seg_scatter = torch.zeros(shape).scatter_(1, seg.unsqueeze(1).long().to(device=self.device), 1)
+        return batch_seg_scatter
+
     def train(self):
         print('Training on device: {}'.format(self.device))
 
@@ -84,10 +89,9 @@ class Trainer:
                 all_depth_pred = calc_all_depth(depth_pred, ordered_planes, ordered_seg, batch.calib,
                                                 batch.cam_height, batch.cam_width)
 
-                # onehot encode (scatter) the batch_seg
-                batch_seg_scatter = torch.zeros(ordered_seg.size()).scatter_(1, batch.seg.unsqueeze(1).long(), 1)
+                batch_seg_onehot = self.seg_to_onehot(batch.seg, seg_pred.size(1))
 
-                all_depth_gt = calc_all_depth(batch.depth, batch.planes, batch_seg_scatter, batch.calib,
+                all_depth_gt = calc_all_depth(batch.depth, batch.planes, batch_seg_onehot, batch.calib,
                                               batch.cam_height,
                                               batch.cam_width)
 
