@@ -58,7 +58,7 @@ class Trainer:
 
     def seg_to_onehot(self, seg, dims):
         shape = [seg.size(0), dims, seg.size(1), seg.size(2)]
-        batch_seg_scatter = torch.zeros(shape).scatter_(1, seg.unsqueeze(1).long().to(device=self.device), 1)
+        batch_seg_scatter = torch.zeros(shape).scatter_(1, seg.unsqueeze(1).long().cpu(), 1)
         return batch_seg_scatter
 
     def train(self):
