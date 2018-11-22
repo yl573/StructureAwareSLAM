@@ -60,6 +60,8 @@ def draw_vis(img, pred_seg, gt_seg, all_pred_depth, gt_depth):
     img = img.cpu()
     pred_seg = pred_seg.cpu()
     gt_seg = gt_seg.cpu()
+    all_pred_depth = all_pred_depth.cpu()
+    gt_depth = gt_depth.cpu()
 
     with Timer('draw') as t:
         pred_seg_assignment = torch.argmax(pred_seg, dim=1)
