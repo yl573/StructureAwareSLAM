@@ -3,6 +3,7 @@ from main.data.record_loader import NUM_PLANES
 import torch.nn.functional as F
 import numpy as np
 from main.loss.modules import calcAssignment, calcPlaneDepthsModule
+from main.utils import Timer
 
 MAX_DEPTH = 10
 
@@ -24,6 +25,33 @@ def find_plane_assignment(planes_pred, planes_gt):
 
     assignment = torch.stack(assignment, dim=0)
     return assignment
+
+def find_plane_assignment_from_seg(seg_pred, seg_gt):
+
+    with Timer('plane assignment') as t:
+
+        batches = seg_pred.size(0)
+        planes = seg_pred.size(1) - 1
+        # get rid of the last dimension for non-planar depth
+        seg_pred = seg_pred[:, :planes, :, :]
+        match_scores = np.zeros((batches, planes, planes))
+
+        for batch in range(batches):
+            for gt_plane in range(planes):
+                match_scores[batch, gt_plane]
+                gt_plane_seg = seg_gt[batch, :, :] == gt_plane
+                for pred_plane in range(planes):
+                    pred_plane_seg = seg_pred[batch, pred_plane, :, :]
+                    score = torch.sum(gt_plane_seg.float() * pred_plane_seg)
+                    match_scores[batch, pred_plane, gt_plane] = score
+
+        assignment = []
+        for i in range(batches):
+            plane_assignment = calcAssignment(match_scores[i, :, :])
+            assignment.append(torch.tensor(plane_assignment))
+
+        assignment = torch.stack(assignment, dim=0)
+        return assignment
 
 
 def permute_planes(planes, assignment):
@@ -76,26 +104,35 @@ def get_metadata(calib, cam_height, cam_width):
     return torch.tensor([focal_x, focal_y, center_x, center_y, cam_width, cam_height])
 
 
-def calc_depth_loss(depth_pred, depth_gt, planes_pred, seg_pred, calib, cam_height, cam_width):
+def calc_all_depth(depth_pred, planes_pred, seg_pred, calib, cam_height, cam_width):
     width = seg_pred.size(3)
     height = seg_pred.size(2)
     metadata = get_metadata(calib, cam_height, cam_width)
     plane_depth = calcPlaneDepthsModule(width, height, planes_pred, metadata)
 
+    if len(depth_pred.size()) == 3:
+        # (batch, W, H) => (batch, 1, W, H)
+        depth_pred = depth_pred.unsqueeze(1)
+
     # concatenate the non-plane depth prediction with the plan depths
     # result: (batch, W, H, NUM_PLANES+1)
     all_depth = torch.cat([plane_depth.permute(0, 3, 1, 2), depth_pred], dim=1)
+    depth_pred = torch.sum(all_depth * seg_pred, 1)
+
+    return depth_pred
+
+
+def calc_depth_loss(all_depth_pred, depth_gt):
 
     # convert shape from (B, H, W) to (B, 1, H, W)
     depth_mask = ((depth_gt > 1e-4) & (depth_gt < MAX_DEPTH)).float().unsqueeze(1)
     depth_gt = depth_gt.unsqueeze(1)
 
-    per_plane_errors = torch.pow(all_depth - depth_gt, 2) * depth_mask
+    depth_error = torch.pow(all_depth_pred - depth_gt, 2)
+    # mask out depth too close or too far
+    depth_error = depth_error * depth_mask
+    depth_loss = depth_error.mean()
 
-    # sum errors along the plane dimension
-    depth_errors = torch.sum(per_plane_errors * seg_pred, 1)
-    depth_error = torch.mean(depth_errors)
+    assert depth_loss.item() > 0, 'invalid depth loss: {}'.format(depth_error)
 
-    assert depth_error.item() > 0, 'invalid depth loss: {}'.format(depth_error)
-
-    return depth_error
+    return depth_loss

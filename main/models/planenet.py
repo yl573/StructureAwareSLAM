@@ -1,22 +1,12 @@
-from main.models.drn import drn_d_22
+from main.models.drn import drn_d_22, drn_d_54
 from main.models.modules import *
 
+from torch import nn
 
-# def temp_softmax(seg):
-#     """
-#     Pytorch softmax has a bug that causes an inplace operation error
-#     using custom function for now
-#     """
-#     exp_seg = torch.exp(seg)
-#     sum_exp = torch.sum(exp_seg, 1).unsqueeze(1)
-#     result = exp_seg / sum_exp
-#
-#     print(torch.sum(result, 1).min().item())
-#
-#     assert torch.sum(result, 1).min().item() == 1.0, 'BUG: temp_softmax not summing to 1!!!'
-#
-#     return result
+class SegmentationDecoder(nn.Module):
 
+    def __init__(self):
+        super().__init__()
 
 class PlaneNet(nn.Module):
     def __init__(self, options):
@@ -25,7 +15,7 @@ class PlaneNet(nn.Module):
         self.options = options
         drn_out_dim = options.drn_channels[-1]
 
-        self.drn = drn_d_22(pretrained=False, out_map=options.drn_out_map, num_classes=-1,
+        self.drn = drn_d_54(pretrained=False, out_map=options.drn_out_map, num_classes=-1,
                             out_middle=False, channels=options.drn_channels)
         # self.pool = torch.nn.AvgPool2d((int(32 * options.height / options.width), 32))
         self.plane_pred = nn.Linear(drn_out_dim, options.numOutputPlanes * 3)
@@ -39,7 +29,7 @@ class PlaneNet(nn.Module):
         self.segmentation_pred = nn.Conv2d(options.feat_planes, options.numOutputPlanes + 1, kernel_size=1)
         self.softmax = nn.Softmax(dim=1)
         self.depth_pred = nn.Conv2d(options.feat_planes, 1, kernel_size=1)
-        self.upsample = torch.nn.Upsample(size=(options.outputHeight, options.outputWidth), mode='bilinear')
+        self.upsample = torch.nn.Upsample(size=(options.outputHeight, options.outputWidth), mode='nearest')
 
     def forward(self, inp):
         batch_dim = inp.shape[0]
@@ -51,8 +41,8 @@ class PlaneNet(nn.Module):
 
         features = self.pyramid(features)
         features = self.feature_conv(features)
-
-        segmentation = self.upsample(self.segmentation_pred(features))
+        seg_pred = self.segmentation_pred(features)
+        segmentation = self.upsample(seg_pred)
         segmentation = self.softmax(segmentation)
 
         depth = self.upsample(self.depth_pred(features))

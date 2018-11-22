@@ -108,6 +108,12 @@ class DRN(nn.Module):
     def __init__(self, block, layers, num_classes=1000,
                  channels=(16, 32, 64, 128, 256, 512, 512, 512),
                  out_map=-1, out_middle=False, pool_size=28, arch='D'):
+
+        print('\nModel params:')
+        print('channels', channels)
+        print('layers', layers)
+        print('out_map', out_map)
+
         super(DRN, self).__init__()
         self.inplanes = channels[0]
         self.out_map = out_map

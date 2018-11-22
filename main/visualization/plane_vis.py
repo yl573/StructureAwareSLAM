@@ -52,8 +52,11 @@ def draw_seg_images(seg):
 
     return colored_planes
 
+def mono_to_color(t):
+    t = t.unsqueeze(1)
+    return torch.cat([t, t, t], dim=1)
 
-def draw_seg_vis(img, pred_seg, gt_seg):
+def draw_vis(img, pred_seg, gt_seg, all_pred_depth, gt_depth):
     img = img.cpu()
     pred_seg = pred_seg.cpu()
     gt_seg = gt_seg.cpu()
@@ -66,6 +69,12 @@ def draw_seg_vis(img, pred_seg, gt_seg):
 
         img = img.permute(0, 3, 1, 2)
 
-        vis_tensor = torch.cat((img.float(), pred_seg, gt_seg), dim=0) / 255
+        max_depth = gt_depth.max()
+        pred_depth_color = mono_to_color(all_pred_depth / max_depth * 255)
+        gt_depth_color = mono_to_color(gt_depth / max_depth * 255)
+
+        # print(pred_seg.min(), pred_seg.max())
+
+        vis_tensor = torch.cat((img.float(), pred_seg, gt_seg, pred_depth_color, gt_depth_color), dim=0) / 255
 
         return vutils.make_grid(vis_tensor, nrow=pred_seg.size(0))

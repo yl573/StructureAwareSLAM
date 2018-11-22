@@ -6,7 +6,7 @@ import os
 import datetime
 from main.loss.losses import *
 from main.loss.tracker import CompositeLossTracker
-from main.visualization.plane_vis import draw_seg_vis
+from main.visualization.plane_vis import draw_vis
 from main.utils import Timer
 
 
@@ -59,9 +59,10 @@ class Trainer:
     def train(self):
         print('Training on device: {}'.format(self.device))
 
+        current_iter = 0
         for epoch in range(self.args.numEpochs):
             for i in range(int(self.args.numTrainingImages / self.args.batchSize)):
-                current_iter = epoch * self.args.numTrainingImages + i
+                current_iter += 1
 
                 with Timer('load data') as t:
                     batch = next(self.data_loader)
@@ -70,7 +71,9 @@ class Trainer:
                 with Timer('forward pass') as t:
                     planes_pred, seg_pred, depth_pred = self.model(batch.image_norm)
 
-                assignment = find_plane_assignment(planes_pred, batch.planes)
+                # assignment = find_plane_assignment(planes_pred, batch.planes)
+
+                assignment = find_plane_assignment_from_seg(seg_pred, batch.seg)
 
                 ordered_planes = permute_planes(planes_pred, assignment)
                 plane_loss = calc_plane_loss(ordered_planes, batch.planes, batch.num_planes)
@@ -78,8 +81,17 @@ class Trainer:
                 ordered_seg = permute_segmentation(seg_pred, assignment)
                 seg_loss = calc_seg_loss(ordered_seg, batch.seg)
 
-                depth_loss = calc_depth_loss(depth_pred, batch.depth, ordered_planes, ordered_seg, batch.calib,
-                                             batch.cam_height, batch.cam_width)
+                all_depth_pred = calc_all_depth(depth_pred, ordered_planes, ordered_seg, batch.calib,
+                                                batch.cam_height, batch.cam_width)
+
+                # onehot encode (scatter) the batch_seg
+                batch_seg_scatter = torch.zeros(ordered_seg.size()).scatter_(1, batch.seg.unsqueeze(1).long(), 1)
+
+                all_depth_gt = calc_all_depth(batch.depth, batch.planes, batch_seg_scatter, batch.calib,
+                                              batch.cam_height,
+                                              batch.cam_width)
+
+                depth_loss = calc_depth_loss(all_depth_pred, batch.depth)
 
                 loss = (self.args.plane_weight * plane_loss +
                         self.args.seg_weight * seg_loss +
@@ -104,15 +116,15 @@ class Trainer:
                     self.tensorboard.add_scalar('train/depth_loss', depth_loss.item(), current_iter)
                     self.tensorboard.add_scalar('train/total_loss', loss.item(), current_iter)
 
-                    seg_vis = draw_seg_vis(batch.image_raw, ordered_seg, batch.seg)
-                    self.tensorboard.add_image('train/plane_visualization', seg_vis, current_iter)
+                    vis = draw_vis(batch.image_raw, ordered_seg, batch.seg, all_depth_pred, all_depth_gt)
+                    self.tensorboard.add_image('train/plane_visualization', vis, current_iter)
 
                     if self.args.train_callback:
                         self.args.train_callback({
                             'plane_loss': plane_loss.item(),
                             'seg_loss': seg_loss.item(),
                             'depth_loss': depth_loss.item(),
-                            'seg_vis': seg_vis
+                            'visualization': vis
                         })
 
             print('\nepoch {} finished'.format(epoch))
@@ -134,15 +146,16 @@ if __name__ == '__main__':
     args.checkpoint = None
     args.numTrainingImages = 700
     args.numEpochs = 5
-    args.printInterval = 10
-    args.batchSize = 8
+    args.printInterval = 1
+    args.batchSize = 2
     args.plane_weight = 1
     args.seg_weight = 1
     args.depth_weight = 1
     args.train_callback = None
 
-    args.drn_channels = (4, 8, 16, 32, 64, 64, 64, 64)
+    # args.drn_channels = (4, 8, 16, 32, 64, 64, 64, 64)
     # args.drn_channels = (4, 4, 4, 4, 4, 4, 4, 4)
+    args.drn_channels = channels = (16, 32, 64, 128, 256, 512, 512, 512)
     args.drn_out_map = 32
     args.pyr_mid_planes = 32
     args.feat_planes = 64
