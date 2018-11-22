@@ -117,7 +117,7 @@ def calc_all_depth(depth_pred, planes_pred, seg_pred, calib, cam_height, cam_wid
     # concatenate the non-plane depth prediction with the plan depths
     # result: (batch, W, H, NUM_PLANES+1)
     all_depth = torch.cat([plane_depth.permute(0, 3, 1, 2), depth_pred], dim=1)
-    depth_pred = torch.sum(all_depth * seg_pred, 1)
+    depth_pred = torch.sum(all_depth * seg_pred.to(device=all_depth.device), 1)
 
     return depth_pred
 
