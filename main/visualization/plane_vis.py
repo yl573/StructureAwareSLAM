@@ -57,11 +57,11 @@ def mono_to_color(t):
     return torch.cat([t, t, t], dim=1)
 
 def draw_vis(img, pred_seg, gt_seg, all_pred_depth, gt_depth):
-    img = img.cpu()
-    pred_seg = pred_seg.cpu()
-    gt_seg = gt_seg.cpu()
-    all_pred_depth = all_pred_depth.cpu()
-    gt_depth = gt_depth.cpu()
+    img = img.cpu().detach()
+    pred_seg = pred_seg.cpu().detach()
+    gt_seg = gt_seg.cpu().detach()
+    all_pred_depth = all_pred_depth.cpu().detach()
+    gt_depth = gt_depth.cpu().detach()
 
     with Timer('draw') as t:
         pred_seg_assignment = torch.argmax(pred_seg, dim=1)
