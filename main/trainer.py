@@ -8,6 +8,7 @@ from main.loss.losses import *
 from main.loss.tracker import CompositeLossTracker
 from main.visualization.plane_vis import draw_vis
 from main.utils import Timer
+from torch import optim
 
 
 class Trainer:
@@ -23,12 +24,18 @@ class Trainer:
             print('Loading state dict from: {}'.format(args.checkpoint))
             self.model.load_state_dict(torch.load(args.checkpoint))
         self.model.to(self.device)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.LR)
+
         self.save_dir = self.create_save_dir(args.log_dir, args.tag)
         print('Saving model data in: {}'.format(self.save_dir))
 
         self.tensorboard = SummaryWriter(log_dir=self.save_dir, comment=args.tag)
         self.losses = CompositeLossTracker(['total_train_loss', 'plane_loss', 'seg_loss', 'depth_loss'])
+
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.LR)
+
+        # linearly decay learning rate from 1.0 LR to 0.1 LR
+        decay_lambda = lambda epoch: 1 - 0.9 * epoch / (args.numEpochs - 1)
+        self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, decay_lambda)
 
     def create_save_dir(self, log_dir, tag):
         timestamp = str(datetime.datetime.utcnow()).replace(' ', '_')
@@ -156,7 +163,8 @@ if __name__ == '__main__':
     args.seg_weight = 1
     args.depth_weight = 0
     args.train_callback = None
-    args.LR = 0.001
+    args.LR = 0.0003
+    args.decay_rate = 0.98
 
     # args.drn_channels = (4, 8, 16, 32, 64, 64, 64, 64)
     # args.drn_channels = (4, 4, 4, 4, 4, 4, 4, 4)
