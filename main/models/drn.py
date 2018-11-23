@@ -108,12 +108,6 @@ class DRN(nn.Module):
     def __init__(self, block, layers, num_classes=1000,
                  channels=(16, 32, 64, 128, 256, 512, 512, 512),
                  out_map=-1, out_middle=False, pool_size=28, arch='D'):
-
-        print('\nModel params:')
-        print('channels', channels)
-        print('layers', layers)
-        print('out_map', out_map)
-
         super(DRN, self).__init__()
         self.inplanes = channels[0]
         self.out_map = out_map
@@ -307,11 +301,7 @@ def drn_c_58(pretrained=False, **kwargs):
 def drn_d_22(pretrained=False, **kwargs):
     model = DRN(BasicBlock, [1, 1, 2, 2, 2, 2, 1, 1], arch='D', **kwargs)
     if pretrained:
-        pretrained_dict = model_zoo.load_url(model_urls['drn-d-22'])
-        pretrained_dict = {k: v for k, v in pretrained_dict.items() if 'fc' not in k}
-        state = model.state_dict()
-        state.update(pretrained_dict)
-        model.load_state_dict(state)
+        model.load_state_dict(model_zoo.load_url(model_urls['drn-d-22']))
     return model
 
 

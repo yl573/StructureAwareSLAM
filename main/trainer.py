@@ -15,7 +15,7 @@ class Trainer:
 
     def __init__(self, args):
         self.args = args
-        self.data_loader = PlaneNetDataLoader(args.val_path, 'val', args.batchSize)
+        self.data_loader = PlaneNetDataLoader(args.train_path, 'train', args.batchSize)
         assert args.numTrainingImages <= len(self.data_loader)
 
         self.device = self.get_device()
@@ -83,9 +83,12 @@ class Trainer:
                 with Timer('forward pass') as t:
                     planes_pred, seg_pred, depth_pred = self.model(batch.image_norm)
 
-                # assignment = find_plane_assignment(planes_pred, batch.planes)
-
-                assignment = find_plane_assignment_from_seg(seg_pred, batch.seg)
+                if self.args.ordering == 'plane':
+                    assignment = find_plane_assignment(planes_pred, batch.planes)
+                elif self.args.ordering == 'seg':
+                    assignment = find_plane_assignment_from_seg(seg_pred, batch.seg)
+                else:
+                    raise ValueError("ordering can only be 'plane' or 'seg'")
 
                 ordered_planes = permute_planes(planes_pred, assignment)
                 plane_loss = calc_plane_loss(ordered_planes, batch.planes, batch.num_planes)
@@ -148,30 +151,22 @@ class Trainer:
 
 if __name__ == '__main__':
     args = parse_args()
-    # args.val_path = '/Volumes/MyPassport/planes_scannet_val.tfrecords'
+    args.train_path = '/Volumes/MyPassport/planes_scannet_train.tfrecords'
     args.val_path = '/Users/yuxuanliu/Desktop/4YP/planes_scannet_val.tfrecords'
     args.log_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs'
     args.tag = 'test'
     args.save_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/models'
-    # args.checkpoint = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/test_2018-11-17_01:04:44.301218/checkpoint-latest'
     args.checkpoint = None
+    args.ordering = 'plane' # or 'seg'
     args.numTrainingImages = 700
     args.numEpochs = 5
     args.printInterval = 1
     args.batchSize = 2
-    args.plane_weight = 0
+    args.plane_weight = 1
     args.seg_weight = 1
-    args.depth_weight = 0
+    args.depth_weight = 1
     args.train_callback = None
     args.LR = 0.0003
-    args.decay_rate = 0.98
-
-    # args.drn_channels = (4, 8, 16, 32, 64, 64, 64, 64)
-    # args.drn_channels = (4, 4, 4, 4, 4, 4, 4, 4)
-    args.drn_channels = channels = (16, 32, 64, 128, 256, 512, 512, 512)
-    args.drn_out_map = 32
-    args.pyr_mid_planes = 32
-    args.feat_planes = 64
 
     trainer = Trainer(args)
     trainer.train()
