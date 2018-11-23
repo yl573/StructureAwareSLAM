@@ -152,10 +152,11 @@ if __name__ == '__main__':
     args.numEpochs = 5
     args.printInterval = 1
     args.batchSize = 2
-    args.plane_weight = 1
+    args.plane_weight = 0
     args.seg_weight = 1
-    args.depth_weight = 1
+    args.depth_weight = 0
     args.train_callback = None
+    args.LR = 0.001
 
     # args.drn_channels = (4, 8, 16, 32, 64, 64, 64, 64)
     # args.drn_channels = (4, 4, 4, 4, 4, 4, 4, 4)

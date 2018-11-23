@@ -2,11 +2,32 @@ from main.models.drn import drn_d_22, drn_d_54
 from main.models.modules import *
 
 from torch import nn
+import torch.nn.functional as F
+
 
 class SegmentationDecoder(nn.Module):
 
-    def __init__(self):
+    def __init__(self, feat_planes, output_planes):
         super().__init__()
+
+        mid_planes = int((output_planes + feat_planes) / 2)
+
+        self.segmentation_pred = nn.Sequential(
+            nn.Conv2d(feat_planes, feat_planes, kernel_size=1),
+            nn.ConvTranspose2d(feat_planes, mid_planes, kernel_size=2),
+            nn.Conv2d(mid_planes, mid_planes, kernel_size=1),
+            nn.ConvTranspose2d(mid_planes, output_planes, kernel_size=2),
+            nn.Conv2d(output_planes, output_planes, kernel_size=1),
+        )
+
+        self.segmentation_pred = nn.Conv2d(feat_planes, output_planes, kernel_size=1)
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, x):
+        x = self.segmentation_pred(x)
+        x = self.softmax(x)
+        return x
+
 
 class PlaneNet(nn.Module):
     def __init__(self, options):
@@ -26,10 +47,9 @@ class PlaneNet(nn.Module):
 
         self.feature_conv = ConvBlock(pyr_planes, options.feat_planes)
 
-        self.segmentation_pred = nn.Conv2d(options.feat_planes, options.numOutputPlanes + 1, kernel_size=1)
-        self.softmax = nn.Softmax(dim=1)
+        self.segmentation_pred = SegmentationDecoder(options.feat_planes, options.numOutputPlanes + 1)
         self.depth_pred = nn.Conv2d(options.feat_planes, 1, kernel_size=1)
-        self.upsample = torch.nn.Upsample(size=(options.outputHeight, options.outputWidth), mode='nearest')
+        self.upsample_size = (options.outputHeight, options.outputWidth)
 
     def forward(self, inp):
         batch_dim = inp.shape[0]
@@ -41,9 +61,10 @@ class PlaneNet(nn.Module):
 
         features = self.pyramid(features)
         features = self.feature_conv(features)
-        seg_pred = self.segmentation_pred(features)
-        segmentation = self.upsample(seg_pred)
-        segmentation = self.softmax(segmentation)
 
-        depth = self.upsample(self.depth_pred(features))
+        seg_pred = self.segmentation_pred(features)
+        segmentation = F.interpolate(seg_pred, size=self.upsample_size, mode='nearest')
+
+        depth = self.depth_pred(features)
+        depth = F.interpolate(depth, size=self.upsample_size, mode='bilinear')
         return planes, segmentation, depth

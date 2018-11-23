@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 import numpy as np
+import torch.nn.functional as F
+
 # from utils import *
 
 ## Conv + bn + relu
@@ -48,14 +50,14 @@ class PyramidModule(nn.Module):
         self.conv_2 = ConvBlock(in_planes, middle_planes, kernel_size=1)
         self.conv_3 = ConvBlock(in_planes, middle_planes, kernel_size=1)
         self.conv_4 = ConvBlock(in_planes, middle_planes, kernel_size=1)
-        self.upsample = torch.nn.Upsample(size=(int(scales[0] * options.height / options.width), scales[0]), mode='bilinear')
+        self.upsample_size = (int(scales[0] * options.height / options.width), int(scales[0]))
         return
     
     def forward(self, inp):
-        x_1 = self.upsample(self.conv_1(self.pool_1(inp)))
-        x_2 = self.upsample(self.conv_2(self.pool_2(inp)))
-        x_3 = self.upsample(self.conv_3(self.pool_3(inp)))
-        x_4 = self.upsample(self.conv_4(self.pool_4(inp)))
+        x_1 = F.interpolate(self.conv_1(self.pool_1(inp)), size=self.upsample_size, mode='bilinear')
+        x_2 = F.interpolate(self.conv_2(self.pool_2(inp)), size=self.upsample_size, mode='bilinear')
+        x_3 = F.interpolate(self.conv_3(self.pool_3(inp)), size=self.upsample_size, mode='bilinear')
+        x_4 = F.interpolate(self.conv_4(self.pool_4(inp)), size=self.upsample_size, mode='bilinear')
         out = torch.cat([inp, x_1, x_2, x_3, x_4], dim=1)
         return out
 
