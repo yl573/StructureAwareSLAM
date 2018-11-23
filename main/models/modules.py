@@ -1,7 +1,5 @@
 import torch
 from torch import nn
-import numpy as np
-from utils import *
 
 ## Conv + bn + relu
 class ConvBlock(nn.Module):
