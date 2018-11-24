@@ -75,8 +75,6 @@ def draw_vis(img, pred_seg, gt_seg, all_pred_depth, gt_depth):
         pred_depth_color = mono_to_color(all_pred_depth / max_depth * 255)
         gt_depth_color = mono_to_color(gt_depth / max_depth * 255)
 
-        # print(pred_seg.min(), pred_seg.max())
-
         vis_tensor = torch.cat((img.float(), pred_seg, gt_seg, pred_depth_color, gt_depth_color), dim=0) / 255
 
         return vutils.make_grid(vis_tensor, nrow=pred_seg.size(0))

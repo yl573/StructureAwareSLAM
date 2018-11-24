@@ -163,8 +163,8 @@ if __name__ == '__main__':
     args.printInterval = 1
     args.batchSize = 2
     args.plane_weight = 1
-    args.seg_weight = 1
-    args.depth_weight = 1
+    args.seg_weight = 0.01
+    args.depth_weight = 0.1
     args.train_callback = None
     args.LR = 0.0003
 
