@@ -128,10 +128,10 @@ def calc_depth_loss(all_depth_pred, depth_gt):
     depth_gt = depth_gt.unsqueeze(1)
 
     depth_error = torch.pow(all_depth_pred - depth_gt, 2)
+    # take log to make the training more stable
+    # depth_error = torch.log(depth_error)
     # mask out depth too close or too far
     depth_error = depth_error * depth_mask
     depth_loss = depth_error.mean()
-
-    assert depth_loss.item() > 0, 'invalid depth loss: {}'.format(depth_error)
 
     return depth_loss

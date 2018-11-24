@@ -88,11 +88,8 @@ class Trainer:
                 batch_seg_onehot = self.seg_to_onehot(batch.seg, seg_pred.size(1))
 
                 if self.args.gt_seg:
-                    print('Using ground truth segmentation')
                     seg_pred = batch_seg_onehot
-
                 if self.args.gt_planes:
-                    print('Using ground truth planes')
                     planes_pred = batch.planes
 
                 if self.args.ordering == 'plane':
@@ -171,16 +168,16 @@ if __name__ == '__main__':
     args.tag = 'test'
     args.save_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/models'
     args.checkpoint = None
-    args.ordering = 'plane'
+    args.ordering = 'seg'
     args.gt_seg = False
-    args.gt_planes = False
+    args.gt_planes = True
     args.numTrainingImages = 700
     args.numEpochs = 5
     args.printInterval = 1
     args.batchSize = 2
     args.plane_weight = 1
-    args.seg_weight = 1
-    args.depth_weight = 0
+    args.seg_weight = 0.1
+    args.depth_weight = 0.01
     args.train_callback = None
     args.LR = 0.0003
 
