@@ -6,7 +6,7 @@ import os
 import datetime
 from main.loss.losses import *
 from main.loss.tracker import CompositeLossTracker
-from main.visualization.plane_vis import draw_vis
+from main.visualization.plane_vis import draw_seg_depth
 from main.utils import Timer
 from torch import optim
 
@@ -71,6 +71,8 @@ class Trainer:
     def train(self):
         print('Training on device: {}'.format(self.device))
 
+        self.prev = None
+
         current_iter = 0
         for epoch in range(self.args.numEpochs):
             for i in range(int(self.args.numTrainingImages / self.args.batchSize)):
@@ -82,6 +84,16 @@ class Trainer:
 
                 with Timer('forward pass') as t:
                     planes_pred, seg_pred, depth_pred = self.model(batch.image_norm)
+
+                batch_seg_onehot = self.seg_to_onehot(batch.seg, seg_pred.size(1))
+
+                if self.args.gt_seg:
+                    print('Using ground truth segmentation')
+                    seg_pred = batch_seg_onehot
+
+                if self.args.gt_planes:
+                    print('Using ground truth planes')
+                    planes_pred = batch.planes
 
                 if self.args.ordering == 'plane':
                     assignment = find_plane_assignment(planes_pred, batch.planes)
@@ -98,13 +110,8 @@ class Trainer:
 
                 all_depth_pred = calc_all_depth(depth_pred, ordered_planes, ordered_seg, batch.calib,
                                                 batch.cam_height, batch.cam_width)
-
-                batch_seg_onehot = self.seg_to_onehot(batch.seg, seg_pred.size(1))
-
                 all_depth_gt = calc_all_depth(batch.depth, batch.planes, batch_seg_onehot, batch.calib,
-                                              batch.cam_height,
-                                              batch.cam_width)
-
+                                              batch.cam_height, batch.cam_width)
                 depth_loss = calc_depth_loss(all_depth_pred, batch.depth)
 
                 loss = (self.args.plane_weight * plane_loss +
@@ -130,15 +137,22 @@ class Trainer:
                     self.tensorboard.add_scalar('train/depth_loss', depth_loss.item(), current_iter)
                     self.tensorboard.add_scalar('train/total_loss', loss.item(), current_iter)
 
-                    vis = draw_vis(batch.image_raw, ordered_seg, batch.seg, all_depth_pred, all_depth_gt)
-                    self.tensorboard.add_image('train/plane_visualization', vis, current_iter)
+                    seg_depth_vis = draw_seg_depth(batch.image_raw, ordered_seg, batch.seg, all_depth_pred, all_depth_gt)
+                    self.tensorboard.add_image('train/plane_visualization', seg_depth_vis, current_iter)
+                    #
+                    # print('planes_pred', planes_pred)
+                    # print('planes_gt', batch.planes)
+
+                    # plane_vis = draw_plane_vis()
+
+                    # self.tensorboard.add_image('train/plane_pred_and_gt', planes_pred, current_iter)
 
                     if self.args.train_callback:
                         self.args.train_callback({
                             'plane_loss': plane_loss.item(),
                             'seg_loss': seg_loss.item(),
                             'depth_loss': depth_loss.item(),
-                            'visualization': vis
+                            'visualization': seg_depth_vis
                         })
 
             print('\nepoch {} finished'.format(epoch))
@@ -157,14 +171,16 @@ if __name__ == '__main__':
     args.tag = 'test'
     args.save_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/models'
     args.checkpoint = None
-    args.ordering = 'plane' # or 'seg'
+    args.ordering = 'plane'
+    args.gt_seg = False
+    args.gt_planes = False
     args.numTrainingImages = 700
     args.numEpochs = 5
     args.printInterval = 1
     args.batchSize = 2
     args.plane_weight = 1
-    args.seg_weight = 0.01
-    args.depth_weight = 0.1
+    args.seg_weight = 1
+    args.depth_weight = 0
     args.train_callback = None
     args.LR = 0.0003
 

@@ -56,7 +56,7 @@ def mono_to_color(t):
     t = t.unsqueeze(1)
     return torch.cat([t, t, t], dim=1)
 
-def draw_vis(img, pred_seg, gt_seg, all_pred_depth, gt_depth):
+def draw_seg_depth(img, pred_seg, gt_seg, all_pred_depth, gt_depth):
     img = img.cpu().detach()
     pred_seg = pred_seg.cpu().detach()
     gt_seg = gt_seg.cpu().detach()

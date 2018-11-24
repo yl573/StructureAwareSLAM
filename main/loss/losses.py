@@ -12,8 +12,10 @@ def find_plane_assignment(planes_pred, planes_gt):
     """
     Calculates assignment for a batch of predicted planes
     """
-    score_matrix = -torch.abs(planes_pred.unsqueeze(1) - planes_gt.unsqueeze(2))
-    score_matrix_norm = score_matrix.norm(dim=3).detach()
+    score_matrix = torch.pow(planes_pred.unsqueeze(1) - planes_gt.unsqueeze(2), 2)
+    # negative loss is score
+    score_matrix_norm = -score_matrix.norm(dim=3).detach()
+    score_matrix_norm = score_matrix_norm - score_matrix_norm.min()
     # score_matrix_norm has size (batch, n_planes, n_planes)
     # score_matrix_norm[b, i, j] is the score between pred plane i and gt plane j for batch b
 
@@ -26,8 +28,8 @@ def find_plane_assignment(planes_pred, planes_gt):
     assignment = torch.stack(assignment, dim=0)
     return assignment
 
-def find_plane_assignment_from_seg(seg_pred, seg_gt):
 
+def find_plane_assignment_from_seg(seg_pred, seg_gt):
     with Timer('plane assignment') as t:
 
         batches = seg_pred.size(0)
@@ -75,20 +77,18 @@ def permute_segmentation(seg, assignment):
     return seg_perm
 
 
-def calc_plane_loss(planes_pred, planes_gt, num_planes):
-    # create valid plane mask
-    valid_mask = torch.zeros(planes_gt.size()).to(device=planes_pred.device)
+def get_valid_mask(mask_shape, num_planes, device):
+    valid_mask = torch.zeros(mask_shape).to(device=device)
     for i, n in enumerate(num_planes):
-        valid_mask[i, :n, :] = 1
+        valid_mask[i][:n] = 1
+    return valid_mask
 
-    loss_full = F.mse_loss(planes_pred, planes_gt, reduction='none')
-    # mask out the invalid planes
-    loss_full = loss_full * valid_mask
-    # then take the mean of the loss
-    loss_reduced = torch.mean(loss_full)
 
-    assert loss_reduced.item() > 0, 'invalid plane loss: {}'.format(loss_reduced)
-    return loss_reduced
+def calc_plane_loss(planes_pred, planes_gt, num_planes):
+    valid_mask = get_valid_mask(planes_pred.shape, num_planes, planes_pred.device)
+
+    loss = F.mse_loss(planes_pred, planes_gt, reduction='none')
+    return torch.mean(loss * valid_mask)
 
 
 def calc_seg_loss(seg_pred, seg_gt):
@@ -123,7 +123,6 @@ def calc_all_depth(depth_pred, planes_pred, seg_pred, calib, cam_height, cam_wid
 
 
 def calc_depth_loss(all_depth_pred, depth_gt):
-
     # convert shape from (B, H, W) to (B, 1, H, W)
     depth_mask = ((depth_gt > 1e-4) & (depth_gt < MAX_DEPTH)).float().unsqueeze(1)
     depth_gt = depth_gt.unsqueeze(1)
