@@ -9,6 +9,7 @@ from main.loss.tracker import CompositeLossTracker
 from main.visualization.plane_vis import draw_seg_depth
 from main.utils import Timer
 from torch import optim
+from itertools import chain
 
 
 class Trainer:
@@ -28,10 +29,25 @@ class Trainer:
         self.save_dir = self.create_save_dir(args.log_dir, args.tag)
         print('Saving model data in: {}'.format(self.save_dir))
 
+        if self.args.gt_seg:
+            print('using gt segmentation')
+        if self.args.gt_planes:
+            print('using gt planes')
+
         self.tensorboard = SummaryWriter(log_dir=self.save_dir, comment=args.tag)
         self.losses = CompositeLossTracker(['total_train_loss', 'plane_loss', 'seg_loss', 'depth_loss'])
 
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.LR)
+        self.adaptive_weights = args.adaptive_weights
+        self.plane_weight = torch.tensor(args.plane_weight, dtype=torch.float, requires_grad=args.adaptive_weights)
+        self.seg_weight = torch.tensor(args.seg_weight, dtype=torch.float, requires_grad=args.adaptive_weights)
+        self.depth_weight = torch.tensor(args.depth_weight, dtype=torch.float, requires_grad=args.adaptive_weights)
+
+        if args.adaptive_weights:
+            trainable_params = chain(self.model.parameters(), [self.plane_weight, self.seg_weight, self.depth_weight])
+        else:
+            trainable_params = self.model.parameters()
+
+        self.optimizer = torch.optim.Adam(trainable_params, lr=args.LR)
 
         # linearly decay learning rate from 1.0 LR to 0.1 LR
         decay_lambda = lambda epoch: 1 - 0.9 * epoch / (args.numEpochs - 1)
@@ -68,6 +84,14 @@ class Trainer:
         batch_seg_scatter = torch.zeros(shape).scatter_(1, seg.unsqueeze(1).long().cpu(), 1)
         return batch_seg_scatter
 
+    def weight_regularization(self):
+        """
+        Intuition from Alex Kendall's paper: https://arxiv.org/pdf/1705.07115.pdf
+        """
+        if self.adaptive_weights:
+            return - (torch.log(self.plane_weight) + torch.log(self.seg_weight) + torch.log(self.depth_weight)).item()
+        return 0
+
     def train(self):
         print('Training on device: {}'.format(self.device))
 
@@ -92,7 +116,6 @@ class Trainer:
                     seg_pred = batch_seg_onehot
                 if self.args.gt_planes:
                     planes_pred = batch.planes
-                    print('using gt planes')
 
                 if self.args.ordering == 'plane':
                     assignment = find_plane_assignment(planes_pred, batch.planes)
@@ -113,9 +136,10 @@ class Trainer:
                                               batch.cam_height, batch.cam_width)
                 depth_loss = calc_depth_loss(all_depth_pred, batch.depth)
 
-                loss = (self.args.plane_weight * plane_loss +
-                        self.args.seg_weight * seg_loss +
-                        self.args.depth_weight * depth_loss)
+                loss = (self.plane_weight * plane_loss +
+                        self.seg_weight * seg_loss +
+                        self.depth_weight * depth_loss +
+                        self.weight_regularization())
 
                 with Timer('backward pass and update') as t:
                     loss.backward()
@@ -135,6 +159,11 @@ class Trainer:
                     self.tensorboard.add_scalar('train/segmentation_loss', seg_loss.item(), current_iter)
                     self.tensorboard.add_scalar('train/depth_loss', depth_loss.item(), current_iter)
                     self.tensorboard.add_scalar('train/total_loss', loss.item(), current_iter)
+
+                    self.tensorboard.add_scalar('weights/plane', self.plane_weight.item(), current_iter)
+                    self.tensorboard.add_scalar('weights/seg', self.seg_weight.item(), current_iter)
+                    self.tensorboard.add_scalar('weights/depth', self.depth_weight.item(), current_iter)
+                    self.tensorboard.add_scalar('weights/regularization', self.weight_regularization(), current_iter)
 
                     seg_depth_vis = draw_seg_depth(batch.image_raw, ordered_seg, batch.seg, all_depth_pred, all_depth_gt)
                     self.tensorboard.add_image('train/plane_visualization', seg_depth_vis, current_iter)
@@ -164,7 +193,7 @@ if __name__ == '__main__':
     args.tag = 'test'
     args.checkpoint = None
     args.ordering = 'plane'
-    args.gt_planes = True
+    args.gt_planes = False
     args.gt_seg = False
     args.numTrainingImages = 700
     args.numEpochs = 5
@@ -173,6 +202,7 @@ if __name__ == '__main__':
     args.plane_weight = 1
     args.seg_weight = 0.1
     args.depth_weight = 0.01
+    args.adaptive_weights = True
     args.train_callback = None
     args.LR = 0.0003
 

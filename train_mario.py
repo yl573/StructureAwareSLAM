@@ -3,6 +3,8 @@ from main.args import parse_args
 from main.trainer import Trainer
 
 
+# CUDA_VISIBLE_DEVICES=2
+
 if __name__ == '__main__':
     args = parse_args()
     args.train_path = '../planes_scannet_val.tfrecords'
@@ -19,7 +21,8 @@ if __name__ == '__main__':
     args.batchSize = 4
     args.plane_weight = 1
     args.seg_weight = 0.1
-    args.depth_weight = 0.005
+    args.depth_weight = 0.01
+    args.adaptive_weights = True
     args.train_callback = None
     args.LR = 0.0003
 
