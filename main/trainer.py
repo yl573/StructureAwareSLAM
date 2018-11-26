@@ -75,6 +75,7 @@ class Trainer:
 
         current_iter = 0
         for epoch in range(self.args.numEpochs):
+            self.scheduler.step(epoch)
             for i in range(int(self.args.numTrainingImages / self.args.batchSize)):
                 current_iter += 1
 
@@ -91,6 +92,7 @@ class Trainer:
                     seg_pred = batch_seg_onehot
                 if self.args.gt_planes:
                     planes_pred = batch.planes
+                    print('using gt planes')
 
                 if self.args.ordering == 'plane':
                     assignment = find_plane_assignment(planes_pred, batch.planes)
@@ -129,6 +131,8 @@ class Trainer:
                 if i % self.args.printInterval == 0:
                     print('epoch: {}, iter: {}, loss: {:.3f}'.format(epoch, i, loss.item()))
 
+                    print(self.scheduler.get_lr()[0])
+
                     self.tensorboard.add_scalar('train/plane_loss', plane_loss.item(), current_iter)
                     self.tensorboard.add_scalar('train/segmentation_loss', seg_loss.item(), current_iter)
                     self.tensorboard.add_scalar('train/depth_loss', depth_loss.item(), current_iter)
@@ -136,13 +140,6 @@ class Trainer:
 
                     seg_depth_vis = draw_seg_depth(batch.image_raw, ordered_seg, batch.seg, all_depth_pred, all_depth_gt)
                     self.tensorboard.add_image('train/plane_visualization', seg_depth_vis, current_iter)
-                    #
-                    # print('planes_pred', planes_pred)
-                    # print('planes_gt', batch.planes)
-
-                    # plane_vis = draw_plane_vis()
-
-                    # self.tensorboard.add_image('train/plane_pred_and_gt', planes_pred, current_iter)
 
                     if self.args.train_callback:
                         self.args.train_callback({
@@ -154,6 +151,7 @@ class Trainer:
 
             print('\nepoch {} finished'.format(epoch))
             self.print_losses()
+            self.tensorboard.add_scalar('LR', self.scheduler.get_lr()[0], current_iter)
 
             save_path = os.path.join(self.save_dir, 'checkpoint-latest')
             torch.save(self.model.state_dict(), save_path)
@@ -168,8 +166,8 @@ if __name__ == '__main__':
     args.tag = 'test'
     args.checkpoint = None
     args.ordering = 'plane'
+    args.gt_planes = True
     args.gt_seg = False
-    args.gt_planes = False
     args.numTrainingImages = 700
     args.numEpochs = 5
     args.printInterval = 1
