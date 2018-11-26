@@ -15,7 +15,7 @@ if __name__ == '__main__':
     args.gt_planes = False
     args.numTrainingImages = 750
     args.numEpochs = 10
-    args.printInterval = 10
+    args.printInterval = 16
     args.batchSize = 4
     args.plane_weight = 1
     args.seg_weight = 0.1
