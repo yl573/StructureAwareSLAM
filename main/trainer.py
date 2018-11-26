@@ -10,6 +10,7 @@ from main.visualization.plane_vis import draw_seg_depth
 from main.utils import Timer
 from torch import optim
 from itertools import chain
+import pprint
 
 
 class Trainer:
@@ -35,6 +36,8 @@ class Trainer:
             print('using gt planes')
 
         self.tensorboard = SummaryWriter(log_dir=self.save_dir, comment=args.tag)
+        self.tensorboard.add_text('args', pprint.pformat(self.args, indent=4), 0)
+
         self.losses = CompositeLossTracker(['total_train_loss', 'plane_loss', 'seg_loss', 'depth_loss'])
 
         self.adaptive_weights = args.adaptive_weights
@@ -206,7 +209,7 @@ if __name__ == '__main__':
     args.plane_weight = 1
     args.seg_weight = 0.1
     args.depth_weight = 0.01
-    args.adaptive_weights = True
+    args.adaptive_weights = False
     args.train_callback = None
     args.LR = 0.0003
 
