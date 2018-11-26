@@ -99,9 +99,9 @@ class Trainer:
         Intuition from Alex Kendall's paper: https://arxiv.org/pdf/1705.07115.pdf
         """
         if self.adaptive_weights:
-            return - (0.5 * torch.log(torch.tensor(2) * self.plane_weight) +
-                      0.5 * torch.log(torch.tensor(2) * self.seg_weight) +
-                      0.5 * torch.log(torch.tensor(2) * self.depth_weight)).item()
+            return - (0.5 * torch.log(torch.tensor(2 * self.plane_weight)) +
+                      0.5 * torch.log(torch.tensor(2 * self.seg_weight)) +
+                      0.5 * torch.log(torch.tensor(2 * self.depth_weight))).item()
         return 0
 
     def clamp_weights(self):
