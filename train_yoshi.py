@@ -2,13 +2,12 @@
 from main.args import parse_args
 from main.trainer import Trainer
 
-
 if __name__ == '__main__':
     args = parse_args()
     args.train_path = '../planes_scannet_val.tfrecords'
     # args.val_path = '/Users/yuxuanliu/Desktop/4YP/planes_scannet_val.tfrecords'
     args.log_dir = '../logs'
-    args.tag = 'mario-{}'.format(args.name)
+    args.tag = 'yoshi-{}'.format(args.name)
     args.checkpoint = None
     args.ordering = 'plane'
     args.gt_seg = False
