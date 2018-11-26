@@ -45,9 +45,9 @@ class Trainer:
         self.losses = CompositeLossTracker(['total_train_loss', 'plane_loss', 'seg_loss', 'depth_loss'])
 
         self.adaptive_weights = args.adaptive_weights
-        self.plane_weight = self.create_scalar_tensor(args.plane_weight)
-        self.seg_weight = self.create_scalar_tensor(args.seg_weight)
-        self.depth_weight = self.create_scalar_tensor(args.depth_weight)
+        self.plane_weight = self.create_scalar_tensor(args.plane_weight, args.adaptive_weights)
+        self.seg_weight = self.create_scalar_tensor(args.seg_weight, args.adaptive_weights)
+        self.depth_weight = self.create_scalar_tensor(args.depth_weight, args.adaptive_weights)
 
         if args.adaptive_weights:
             trainable_params = chain(self.model.parameters(), [self.plane_weight, self.seg_weight, self.depth_weight])
@@ -60,8 +60,8 @@ class Trainer:
         decay_lambda = lambda epoch: 1 - 0.9 * epoch / (args.numEpochs - 1)
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, decay_lambda)
 
-    def create_scalar_tensor(self, value):
-        return torch.tensor(value, dtype=torch.float, requires_grad=args.adaptive_weights, device=self.device)
+    def create_scalar_tensor(self, value, require_grad):
+        return torch.tensor(value, dtype=torch.float, requires_grad=require_grad, device=self.device)
 
     def create_save_dir(self, log_dir, tag):
         timestamp = str(datetime.datetime.utcnow()).replace(' ', '_')
@@ -106,11 +106,11 @@ class Trainer:
 
     def clamp_weights(self):
         if self.plane_weight.item() < 0.0:
-            self.plane_weight = self.create_scalar_tensor(0)
+            self.plane_weight = self.create_scalar_tensor(0, True)
         if self.seg_weight.item() < 0.0:
-            self.seg_weight = self.create_scalar_tensor(0)
+            self.seg_weight = self.create_scalar_tensor(0, True)
         if self.depth_weight.item() < 0.0:
-            self.depth_weight = self.create_scalar_tensor(0)
+            self.depth_weight = self.create_scalar_tensor(0, True)
 
 
     def train(self):
