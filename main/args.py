@@ -8,6 +8,8 @@ def parse_args():
 
     parser.add_argument('-tp', '--train-path', type=str, default='/Volumes/MyPassport/planes_scannet_train.tfrecords')
 
+    parser.add_argument('-ld', '--log-dir', type=str, default='/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs')
+
     parser.add_argument('--task', dest='task',
                         help='task type: [train, test, predict]',
                         default='train', type=str)
