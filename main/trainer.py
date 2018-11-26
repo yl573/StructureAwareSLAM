@@ -164,7 +164,7 @@ if __name__ == '__main__':
     args = parse_args()
     # args.train_path = '/Volumes/MyPassport/planes_scannet_train.tfrecords'
     # args.val_path = '/Users/yuxuanliu/Desktop/4YP/planes_scannet_val.tfrecords'
-    args.log_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs'
+    # args.log_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs'
     args.tag = 'test'
     args.checkpoint = None
     args.ordering = 'plane'
