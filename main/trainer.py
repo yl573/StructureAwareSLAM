@@ -45,12 +45,9 @@ class Trainer:
         self.losses = CompositeLossTracker(['total_train_loss', 'plane_loss', 'seg_loss', 'depth_loss'])
 
         self.adaptive_weights = args.adaptive_weights
-        self.plane_weight = torch.tensor(args.plane_weight, dtype=torch.float, requires_grad=args.adaptive_weights,
-                                         device=self.device)
-        self.seg_weight = torch.tensor(args.seg_weight, dtype=torch.float, requires_grad=args.adaptive_weights,
-                                       device=self.device)
-        self.depth_weight = torch.tensor(args.depth_weight, dtype=torch.float, requires_grad=args.adaptive_weights,
-                                         device=self.device)
+        self.plane_weight = self.create_scalar_tensor(args.plane_weight)
+        self.seg_weight = self.create_scalar_tensor(args.seg_weight)
+        self.depth_weight = self.create_scalar_tensor(args.depth_weight)
 
         if args.adaptive_weights:
             trainable_params = chain(self.model.parameters(), [self.plane_weight, self.seg_weight, self.depth_weight])
@@ -62,6 +59,9 @@ class Trainer:
         # linearly decay learning rate from 1.0 LR to 0.1 LR
         decay_lambda = lambda epoch: 1 - 0.9 * epoch / (args.numEpochs - 1)
         self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, decay_lambda)
+
+    def create_scalar_tensor(self, value):
+        return torch.tensor(value, dtype=torch.float, requires_grad=args.adaptive_weights, device=self.device)
 
     def create_save_dir(self, log_dir, tag):
         timestamp = str(datetime.datetime.utcnow()).replace(' ', '_')
@@ -105,12 +105,12 @@ class Trainer:
         return 0
 
     def clamp_weights(self):
-        if self.plane_weight < 0.0:
-            self.plane_weight = 0.0
-        if self.seg_weight < 0.0:
-            self.seg_weight = 0.0
-        if self.depth_weight < 0.0:
-            self.depth_weight = 0.0
+        if self.plane_weight.item() < 0.0:
+            self.plane_weight = self.create_scalar_tensor(0)
+        if self.seg_weight.item() < 0.0:
+            self.seg_weight = self.create_scalar_tensor(0)
+        if self.depth_weight.item() < 0.0:
+            self.depth_weight = self.create_scalar_tensor(0)
 
 
     def train(self):
