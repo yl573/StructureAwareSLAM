@@ -104,6 +104,15 @@ class Trainer:
                       0.5 * torch.log(2 * self.depth_weight)).item()
         return 0
 
+    def clamp_weights(self):
+        if self.plane_weight < 0.0:
+            self.plane_weight = 0.0
+        if self.seg_weight < 0.0:
+            self.seg_weight = 0.0
+        if self.depth_weight < 0.0:
+            self.depth_weight = 0.0
+
+
     def train(self):
         print('Training on device: {}'.format(self.device))
 
@@ -156,6 +165,7 @@ class Trainer:
                 with Timer('backward pass and update') as t:
                     loss.backward()
                     self.optimizer.step()
+                self.clamp_weights()
 
                 self.losses.update(dict(
                     total_train_loss=loss.item(),
@@ -191,7 +201,7 @@ class Trainer:
 
             print('\nepoch {} finished'.format(epoch))
             self.print_losses()
-            self.tensorboard.add_scalar('LR', self.scheduler.get_lr()[0], current_iter)
+            self.tensorboard.add_scalar('LR', self.scheduler.get_lr()[0], epoch)
 
             save_path = os.path.join(self.save_dir, 'checkpoint-latest')
             torch.save(self.model.state_dict(), save_path)
