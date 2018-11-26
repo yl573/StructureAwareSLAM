@@ -92,7 +92,7 @@ class Trainer:
         Intuition from Alex Kendall's paper: https://arxiv.org/pdf/1705.07115.pdf
         """
         if self.adaptive_weights:
-            return - 10 * (torch.log(self.plane_weight) + torch.log(self.seg_weight) + torch.log(self.depth_weight)).item()
+            return - (torch.log(self.plane_weight) + torch.log(self.seg_weight) + torch.log(self.depth_weight)).item()
         return 0
 
     def train(self):
