@@ -131,8 +131,6 @@ class Trainer:
                 if i % self.args.printInterval == 0:
                     print('epoch: {}, iter: {}, loss: {:.3f}'.format(epoch, i, loss.item()))
 
-                    print(self.scheduler.get_lr()[0])
-
                     self.tensorboard.add_scalar('train/plane_loss', plane_loss.item(), current_iter)
                     self.tensorboard.add_scalar('train/segmentation_loss', seg_loss.item(), current_iter)
                     self.tensorboard.add_scalar('train/depth_loss', depth_loss.item(), current_iter)
