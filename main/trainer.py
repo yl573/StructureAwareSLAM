@@ -12,6 +12,10 @@ from torch import optim
 from itertools import chain
 import pprint
 
+import py3nvml
+
+py3nvml.grab_gpus(1)
+
 
 class Trainer:
 
@@ -95,7 +99,9 @@ class Trainer:
         Intuition from Alex Kendall's paper: https://arxiv.org/pdf/1705.07115.pdf
         """
         if self.adaptive_weights:
-            return - (torch.log(self.plane_weight) + torch.log(self.seg_weight) + torch.log(self.depth_weight)).item()
+            return - (0.5 * torch.log(2 * self.plane_weight) +
+                      0.5 * torch.log(2 * self.seg_weight) +
+                      0.5 * torch.log(2 * self.depth_weight)).item()
         return 0
 
     def train(self):
@@ -107,7 +113,7 @@ class Trainer:
         for epoch in range(self.args.numEpochs):
             self.scheduler.step(epoch)
             for i in range(int(self.args.numTrainingImages / self.args.batchSize)):
-                current_iter += 1
+                current_iter += self.args.batchSize
 
                 with Timer('load data') as t:
                     batch = next(self.data_loader)
