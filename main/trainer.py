@@ -106,11 +106,11 @@ class Trainer:
 
     def clamp_weights(self):
         if self.plane_weight.item() < 0.0:
-            self.plane_weight = self.create_scalar_tensor(0, True)
+            self.plane_weight = self.create_scalar_tensor(1e-4, True)
         if self.seg_weight.item() < 0.0:
-            self.seg_weight = self.create_scalar_tensor(0, True)
+            self.seg_weight = self.create_scalar_tensor(1e-4, True)
         if self.depth_weight.item() < 0.0:
-            self.depth_weight = self.create_scalar_tensor(0, True)
+            self.depth_weight = self.create_scalar_tensor(1e-4, True)
 
 
     def train(self):
