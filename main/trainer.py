@@ -38,9 +38,12 @@ class Trainer:
         self.losses = CompositeLossTracker(['total_train_loss', 'plane_loss', 'seg_loss', 'depth_loss'])
 
         self.adaptive_weights = args.adaptive_weights
-        self.plane_weight = torch.tensor(args.plane_weight, dtype=torch.float, requires_grad=args.adaptive_weights)
-        self.seg_weight = torch.tensor(args.seg_weight, dtype=torch.float, requires_grad=args.adaptive_weights)
-        self.depth_weight = torch.tensor(args.depth_weight, dtype=torch.float, requires_grad=args.adaptive_weights)
+        self.plane_weight = torch.tensor(args.plane_weight, dtype=torch.float, requires_grad=args.adaptive_weights,
+                                         device=self.device)
+        self.seg_weight = torch.tensor(args.seg_weight, dtype=torch.float, requires_grad=args.adaptive_weights,
+                                       device=self.device)
+        self.depth_weight = torch.tensor(args.depth_weight, dtype=torch.float, requires_grad=args.adaptive_weights,
+                                         device=self.device)
 
         if args.adaptive_weights:
             trainable_params = chain(self.model.parameters(), [self.plane_weight, self.seg_weight, self.depth_weight])
@@ -89,7 +92,7 @@ class Trainer:
         Intuition from Alex Kendall's paper: https://arxiv.org/pdf/1705.07115.pdf
         """
         if self.adaptive_weights:
-            return - (torch.log(self.plane_weight) + torch.log(self.seg_weight) + torch.log(self.depth_weight)).item()
+            return - 10 * (torch.log(self.plane_weight) + torch.log(self.seg_weight) + torch.log(self.depth_weight)).item()
         return 0
 
     def train(self):
@@ -165,7 +168,8 @@ class Trainer:
                     self.tensorboard.add_scalar('weights/depth', self.depth_weight.item(), current_iter)
                     self.tensorboard.add_scalar('weights/regularization', self.weight_regularization(), current_iter)
 
-                    seg_depth_vis = draw_seg_depth(batch.image_raw, ordered_seg, batch.seg, all_depth_pred, all_depth_gt)
+                    seg_depth_vis = draw_seg_depth(batch.image_raw, ordered_seg, batch.seg, all_depth_pred,
+                                                   all_depth_gt)
                     self.tensorboard.add_image('train/plane_visualization', seg_depth_vis, current_iter)
 
                     if self.args.train_callback:
