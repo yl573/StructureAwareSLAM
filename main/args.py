@@ -6,6 +6,8 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='PlaneFlow')
 
+    parser.add_argument('-tp', '--train-path', type=str, default='/Volumes/MyPassport/planes_scannet_train.tfrecords')
+
     parser.add_argument('--task', dest='task',
                         help='task type: [train, test, predict]',
                         default='train', type=str)

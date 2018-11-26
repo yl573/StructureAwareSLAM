@@ -162,15 +162,14 @@ class Trainer:
 
 if __name__ == '__main__':
     args = parse_args()
-    args.train_path = '/Volumes/MyPassport/planes_scannet_train.tfrecords'
-    args.val_path = '/Users/yuxuanliu/Desktop/4YP/planes_scannet_val.tfrecords'
+    # args.train_path = '/Volumes/MyPassport/planes_scannet_train.tfrecords'
+    # args.val_path = '/Users/yuxuanliu/Desktop/4YP/planes_scannet_val.tfrecords'
     args.log_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs'
     args.tag = 'test'
-    args.save_dir = '/Users/yuxuanliu/Desktop/4YP/StructureSLAM/logs/models'
     args.checkpoint = None
-    args.ordering = 'seg'
+    args.ordering = 'plane'
     args.gt_seg = False
-    args.gt_planes = True
+    args.gt_planes = False
     args.numTrainingImages = 700
     args.numEpochs = 5
     args.printInterval = 1
